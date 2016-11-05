@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from Tkinter import *
+import tkMessageBox
 import random
 
 
@@ -9,14 +10,13 @@ class GUI(Frame):
 
     colors = {'red', 'blue', 'green', 'orange', 'purple', 'yellow', 'teal', 'pink', 'grey'}
 
-    def __init__(self, parent, default_x, default_y):
+    def __init__(self, parent, default_x, default_y, title):
         Frame.__init__(self, parent)
 
         self.parent = parent
+        self.title = title
         self.default_x = default_x
         self.default_y = default_y
-
-        self.set_centered_geometry(640, 480)
 
         self.init_menu()
         self.init_ui()
@@ -33,11 +33,22 @@ class GUI(Frame):
         file_menu.add_command(label="Exit", command=lambda: self.quit())
         help_menu = Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="Help", menu=help_menu)
+        help_menu.add_command(
+            label="About",
+            command=lambda: tkMessageBox.showinfo("About "+self.title,
+                                                   message="Manager: Dachelle Robinson\n"
+                                                           "Backend: David Nadwodny\n"
+                                                           "Frontend: Himel Das\n"
+                                                           u"\n\u00a9 2016 UMUC CMSC 495 7980"
+                                                  )
+        )
         self.parent.config(menu=menu_bar)
 
     def init_ui(self):
 
-        self.parent.title("Crypto")
+        self.set_centered_geometry(self.default_x, self.default_y)
+
+        self.parent.title(self.title)
 
         panel = PanedWindow(self, orient=HORIZONTAL, relief=RAISED, borderwidth=1, showhandle=True)
         panel.pack(fill=BOTH, expand=1)
@@ -69,7 +80,7 @@ class GUI(Frame):
 def main():
 
     root = Tk()
-    app = GUI(root, 640, 480)
+    app = GUI(root, 640, 480, "Crypto Chat")
     root.mainloop()
 
 
