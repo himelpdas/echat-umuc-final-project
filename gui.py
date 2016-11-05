@@ -7,20 +7,24 @@ import random
 
 class GUI(Frame):
 
-    @staticmethod
-    def get_centered_geometry(root, x, y):
-        x_offset = (root.winfo_screenwidth() - x) / 2
-        y_offset = (root.winfo_screenheight() - y) / 2
-        return "%sx%s+%s+%s"%(x, y, x_offset, y_offset)
-
     colors = {'red', 'blue', 'green', 'orange', 'purple', 'yellow', 'teal', 'pink', 'grey'}
 
-    def __init__(self, parent):
+    def __init__(self, parent, default_x, default_y):
         Frame.__init__(self, parent)
 
         self.parent = parent
+        self.default_x = default_x
+        self.default_y = default_y
+
+        self.set_centered_geometry(640, 480)
+
         self.init_menu()
         self.init_ui()
+
+    def set_centered_geometry(self, x, y):
+        x_offset = (self.parent.winfo_screenwidth() - x) / 2
+        y_offset = (self.parent.winfo_screenheight() - y) / 2
+        self.parent.geometry("%sx%s+%s+%s" % (x, y, x_offset, y_offset))
 
     def init_menu(self):
         menu_bar = Menu(self.parent)
@@ -52,7 +56,7 @@ class GUI(Frame):
 
         panel.add(users)
         panel.add(messages)
-        panel.sash_place(0, 200, 0)
+        panel.sash_place(0, self.default_x/3, 0)
 
         self.pack(fill=BOTH, expand=True)
 
@@ -63,8 +67,7 @@ class GUI(Frame):
 def main():
 
     root = Tk()
-    root.geometry(GUI.get_centered_geometry(root, 640, 480))
-    app = GUI(root)
+    app = GUI(root, 640, 480)
     root.mainloop()
 
 
