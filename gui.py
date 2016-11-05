@@ -37,7 +37,7 @@ class GUI(Frame):
         for item in ["Dachelle", "David", "Himel", "John", "Robert", "Sally", "Trisha"]:
             users.insert(0, item)  # opposite of END
             _fg = random.choice(list(self.colors.difference(_last_fg)))
-            _last_fg = []
+            _last_fg = [_fg]
             _bg = random.choice(list(self.colors.difference([_fg]+_last_bg)))  # ensure different colors each row
             _last_bg = [_bg]
             users.itemconfig(0, {'fg': _fg, 'bg': _bg})
