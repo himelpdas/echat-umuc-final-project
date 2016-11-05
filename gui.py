@@ -7,7 +7,13 @@ import random
 
 class GUI(Frame):
 
-    colors = {'red', 'blue', 'green', 'orange', 'purple', 'yellow', 'teal'}
+    @staticmethod
+    def get_centered_geometry(root, x, y):
+        x_offset = (root.winfo_screenwidth() - x) / 2
+        y_offset = (root.winfo_screenheight() - y) / 2
+        return "%sx%s+%s+%s"%(x, y, x_offset, y_offset)
+
+    colors = {'red', 'blue', 'green', 'orange', 'purple', 'yellow', 'teal', 'pink', 'grey'}
 
     def __init__(self, parent):
         Frame.__init__(self, parent)
@@ -38,7 +44,7 @@ class GUI(Frame):
             users.insert(0, item)  # opposite of END
             _fg = random.choice(list(self.colors.difference(_last_fg)))
             _last_fg = [_fg]
-            _bg = random.choice(list(self.colors.difference([_fg]+_last_bg)))  # ensure different colors each row
+            _bg = random.choice(list(self.colors.difference(_last_fg+_last_bg)))  # ensure different colors each row
             _last_bg = [_bg]
             users.itemconfig(0, {'fg': _fg, 'bg': _bg})
 
@@ -57,7 +63,7 @@ class GUI(Frame):
 def main():
 
     root = Tk()
-    root.geometry("600x480")
+    root.geometry(GUI.get_centered_geometry(root, 640, 480))
     app = GUI(root)
     root.mainloop()
 
