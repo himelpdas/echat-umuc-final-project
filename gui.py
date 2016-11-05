@@ -51,7 +51,7 @@ class GUI(Frame):
         self.parent.title(self.title)
 
         panel = PanedWindow(self, orient=HORIZONTAL, relief=RAISED, borderwidth=1, showhandle=True)
-        panel.pack(fill=BOTH, expand=1)
+        panel.pack(fill=BOTH, expand=True)
 
         users = Listbox(panel)
         _last_bg, _last_fg = [], []
@@ -71,10 +71,10 @@ class GUI(Frame):
 
         self.pack(fill=BOTH, expand=True)
 
-        label = Label(self, text="Enter Message:")
-        line_edit = Entry(self)
-        label.pack(side=LEFT)
-        line_edit.pack(side=RIGHT, fill=X, expand=True)  # expand entire x free space
+        message_label = Label(self, text="Enter Message:")
+        message_entry = Entry(self)
+        message_label.pack(side=LEFT)
+        message_entry.pack(side=RIGHT, fill=X, expand=True)  # expand entire x free space
 
 
 def main():
