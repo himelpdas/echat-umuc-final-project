@@ -36,10 +36,10 @@ class GUI(Frame):
         help_menu.add_command(
             label="About",
             command=lambda: tkMessageBox.showinfo("About "+self.title,
-                                                   message="Manager: Dachelle Robinson\n"
-                                                           "Backend: David Nadwodny\n"
-                                                           "Frontend: Himel Das\n"
-                                                           u"\n\u00a9 2016 UMUC CMSC 495 7980"
+                                                  message="Backend: David Nadwodny\n"
+                                                          "Frontend: Himel Das\n"
+                                                          "Manager: Dachelle Robinson\n"
+                                                          u"\n\u00a9 2016 UMUC CMSC 495 7980"
                                                   )
         )
         self.parent.config(menu=menu_bar)
