@@ -60,8 +60,10 @@ class GUI(Frame):
 
         self.pack(fill=BOTH, expand=True)
 
+        label = Label(self, text="Enter Message:")
         line_edit = Entry(self)
-        line_edit.pack(fill=X)
+        label.pack(side=LEFT)
+        line_edit.pack(side=RIGHT, fill=X, expand=True)  # expand entire x free space
 
 
 def main():
