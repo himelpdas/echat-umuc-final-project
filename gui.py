@@ -88,7 +88,7 @@ class GUI(Frame):
         menu_bar = Menu(self.parent)
         file_menu = Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="Exit", command=lambda: self.quit())
+        file_menu.add_command(label="Exit", command=lambda: self.on_close())
         help_menu = Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="Help", menu=help_menu)
         help_menu.add_command(
