@@ -41,7 +41,7 @@ class GUI(Frame):
 
     colors = {'red', 'blue', 'green', 'orange', 'purple', 'yellow', 'teal', 'pink', 'grey'}
 
-    def __init__(self, parent, queue, kill, default_x, default_y, title):
+    def __init__(self, parent, queue, kill, title):
         Frame.__init__(self, parent)
 
         # init args
@@ -49,10 +49,16 @@ class GUI(Frame):
         self.queue = queue
         self.kill = kill  # temp
         self.title = title
-        self.default_x = default_x
-        self.default_y = default_y
+
+        # helper variables
+        self._listbox_previous_select = None
+        self._listbox_current_select = None
+        self._default_user_colors = {}
+        self._blink = False
 
         # declare widgets
+        self.panel = None
+        self.users = None
         self.messages = None
         self.message_entry = None
 
@@ -63,6 +69,12 @@ class GUI(Frame):
         self.init_menu()
         self.init_ui()
 
+        # set dimensions
+        parent.update()  # force app width and height to update before mainloop  http://bit.ly/2eroHkk
+        self.default_x = self.parent.winfo_width()
+        self.default_y = self.parent.winfo_height()
+
+        # task loop
         parent.protocol("WM_DELETE_WINDOW", self.on_close)  # http://bit.ly/2fPXjRS
         self.task_loop()
 
@@ -71,18 +83,26 @@ class GUI(Frame):
         self.parent.destroy()
 
     def task_loop(self):
+        if self._listbox_current_select:
+            self._blink = not self._blink
+            self.messages.tag_config(self._listbox_current_select, underline=self._blink)
+
         try:
             incoming = self.queue.get_nowait()
             self.add_message(*incoming)
         except Empty:
             pass
         finally:
-            self.parent.after(10, self.task_loop)  # update gui event loop
+            self.parent.after(200, self.task_loop)  # update gui event loop
 
-    def set_centered_geometry(self, x, y):
+    def set_centered_geometry(self):
+        x = self.default_x
+        y = self.default_y
+        self.parent.minsize(x, y)  # set min size so widgets don't disappear  http://bit.ly/2ersPkb
         x_offset = (self.parent.winfo_screenwidth() - x) / 2
         y_offset = (self.parent.winfo_screenheight() - y) / 2
         self.parent.geometry("%sx%s+%s+%s" % (x, y, x_offset, y_offset))
+        self.panel.sash_place(0, self.default_x / 4, 0)
 
     def init_menu(self):
         menu_bar = Menu(self.parent)
@@ -104,39 +124,59 @@ class GUI(Frame):
 
     def init_ui(self):
 
-        self.set_centered_geometry(self.default_x, self.default_y)
-
         self.parent.title(self.title)
 
-        panel = PanedWindow(self, orient=HORIZONTAL, relief=RAISED, borderwidth=1, showhandle=True)
-        panel.pack(fill=BOTH, expand=True)
+        frame = Frame(self)
 
-        self.messages = Text(panel, bg="gray12", fg="gray93", wrap=WORD)
+        self.panel = PanedWindow(frame, orient=HORIZONTAL, relief=RAISED, borderwidth=1, showhandle=True)
+        self.panel.pack(fill=BOTH, side=LEFT, expand=True)
 
-        users = Listbox(panel, bg="gray12")
+        scrollbar = Scrollbar(frame)
+        scrollbar.pack(side=RIGHT, fill=Y)
+
+        frame.pack(fill=BOTH, expand=True)
+
+        self.messages = Text(self.panel, bg="gray12", fg="gray93", wrap=WORD, yscrollcommand=scrollbar.set)
+        self.messages.bind("<Key>", lambda e: "break")  # make readonly  http://bit.ly/2erqllU  http://bit.ly/2ersn5y
+
+        self.users = Listbox(self.panel, bg="gray12", selectforeground="white",
+                             exportselection=False,  # ensure selection even when clicking outside http://bit.ly/2fQb8Qq
+                             selectbackground="turquoise")
+        self.users.bind("<<ListboxSelect>>", self.listbox_select_callback)  # http://bit.ly/2erzieI
         _last_bg, _last_fg = [], []
         for name in dummy_names:
-            users.insert(0, name)  # opposite of END
+            self.users.insert(0, name)  # opposite of END
             _fg = random.choice(list(self.colors.difference(_last_fg)))
             _last_fg = [_fg]
             _bg = random.choice(list(self.colors.difference(_last_fg+_last_bg)))  # ensure different colors each row
             _last_bg = [_bg]
-            users.itemconfig(0, {'fg': _fg, 'bg': _bg})
+            self.users.itemconfig(0, {'fg': _fg, 'bg': _bg})
+            self._default_user_colors[name] = {'fg': _fg, 'bg': _bg}
             self.messages.tag_config(name, background=_bg, foreground=_fg)
 
-        panel.add(users)
-        panel.add(self.messages)
-        panel.sash_place(0, self.default_x/4, 0)
-
-        self.pack(fill=BOTH, expand=True)
+        self.panel.add(self.users)
+        self.panel.add(self.messages)
 
         message_label = Label(self, text="Enter Message:")
-        self.message_entry = Entry(self)
+        self.message_entry = Entry(self, bg="gray99")
         message_label.pack(side=LEFT)
         self.message_entry.pack(side=RIGHT, fill=X, expand=True)  # expand entire x free space
 
         # bind widgets to callbacks
         self.message_entry.bind("<Return>", self.message_entry_callback)
+
+        # show all
+        self.pack(fill=BOTH, expand=True)
+
+    def listbox_select_callback(self, evt):
+        if self._listbox_previous_select:
+            previous_colors = self._default_user_colors[self._listbox_previous_select]
+            self.messages.tag_config(self._listbox_previous_select,
+                                     underline=False,
+                                     background=previous_colors["bg"], foreground=previous_colors["fg"])
+        self._listbox_current_select = self.users.get(ANCHOR)  # ANCHOR not ACTIVE http://bit.ly/2fQerqY
+        self.messages.tag_config(self._listbox_current_select, background="turquoise", foreground="white")
+        self._listbox_previous_select = self._listbox_current_select
 
     def message_entry_callback(self, evt):
         new = self.message_entry.get()
@@ -157,7 +197,8 @@ def main():
     p.start()
 
     root = Tk()
-    app = GUI(root, queue, kill, 640, 480, "Crypto Chat")
+    app = GUI(root, queue, kill, "Crypto Chat")
+    app.set_centered_geometry()
     root.mainloop()
 
 
