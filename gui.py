@@ -111,7 +111,7 @@ class GUI(Frame):
         panel = PanedWindow(self, orient=HORIZONTAL, relief=RAISED, borderwidth=1, showhandle=True)
         panel.pack(fill=BOTH, expand=True)
 
-        self.messages = Text(panel, bg="gray12", fg="gray93")
+        self.messages = Text(panel, bg="gray12", fg="gray93", wrap=WORD)
 
         users = Listbox(panel, bg="gray12")
         _last_bg, _last_fg = [], []
@@ -126,7 +126,7 @@ class GUI(Frame):
 
         panel.add(users)
         panel.add(self.messages)
-        panel.sash_place(0, self.default_x/3, 0)
+        panel.sash_place(0, self.default_x/4, 0)
 
         self.pack(fill=BOTH, expand=True)
 
