@@ -13,7 +13,7 @@ import time
 dummy_names = ["Dachelle", "David", "Himel", "John", "Julia", "Robert", "Sally", "Trisha"]
 
 lorem_ipsum = "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et " \
-              "dolore magna aliqua Ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip " \
+              "dolore magna aliqua ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip " \
               "ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore " \
               "eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia " \
               "deserunt mollit anim id est laborum".split(" ")
@@ -96,12 +96,10 @@ class GUI(Frame):
             self.parent.after(200, self.task_loop)  # update gui event loop
 
     def set_centered_geometry(self):
-        x = self.default_x
-        y = self.default_y
-        self.parent.minsize(x, y)  # set min size so widgets don't disappear  http://bit.ly/2ersPkb
-        x_offset = (self.parent.winfo_screenwidth() - x) / 2
-        y_offset = (self.parent.winfo_screenheight() - y) / 2
-        self.parent.geometry("%sx%s+%s+%s" % (x, y, x_offset, y_offset))
+        self.parent.minsize(self.default_x, self.default_y)  # set minsize so widgets wont hide  http://bit.ly/2ersPkb
+        x_offset = (self.parent.winfo_screenwidth() - self.default_x) / 2
+        y_offset = (self.parent.winfo_screenheight() - self.default_y) / 2
+        self.parent.geometry("%sx%s+%s+%s" % (self.default_x, self.default_y, x_offset, y_offset))
         self.panel.sash_place(0, self.default_x / 4, 0)
 
     def init_menu(self):
@@ -114,10 +112,12 @@ class GUI(Frame):
         help_menu.add_command(
             label="About",
             command=lambda: tkMessageBox.showinfo("About "+self.title,
-                                                  message="Backend: David Nadwodny\n"
-                                                          "Frontend: Himel Das\n"
-                                                          "Manager: Dachelle Robinson\n"
-                                                          u"\n\u00a9 2016 UMUC CMSC 495 7980"
+                                                  message=self.title+"\n\n"
+                                                                     "Backend: David Nadwodny\n"
+                                                                     "Frontend: Himel Das\n"
+                                                                     "Manager: Dachelle Robinson\n"
+                                                                     "Professor: Nicholas Duchon\n"
+                                                                     u"\n\u00a9 2016 UMUC CMSC 495 7980"
                                                   )
         )
         self.parent.config(menu=menu_bar)
@@ -136,7 +136,9 @@ class GUI(Frame):
 
         frame.pack(fill=BOTH, expand=True)
 
-        self.messages = Text(self.panel, bg="gray12", fg="gray93", wrap=WORD, yscrollcommand=scrollbar.set)
+        self.messages = Text(self.panel, bg="gray12", fg="gray93", wrap=WORD,
+                             yscrollcommand=scrollbar.set)  # when yview change, change position of scrollbar
+        scrollbar.config(command=self.messages.yview)  # when scrollbar change, change yview of text widget
         self.messages.bind("<Key>", lambda e: "break")  # make readonly  http://bit.ly/2erqllU  http://bit.ly/2ersn5y
 
         self.users = Listbox(self.panel, bg="gray12", selectforeground="white",
@@ -197,7 +199,7 @@ def main():
     p.start()
 
     root = Tk()
-    app = GUI(root, queue, kill, "Crypto Chat")
+    app = GUI(root, queue, kill, "EChatr - Encrypted Chat System")
     app.set_centered_geometry()
     root.mainloop()
 
