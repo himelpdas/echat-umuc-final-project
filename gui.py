@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from Tkinter import *
-import tkMessageBox
+import tkMessageBox, tkSimpleDialog
 from multiprocessing import Process, Queue
 from Queue import Empty
 import random
@@ -35,6 +35,34 @@ def dummy_server_process(queue, kill):
                 break
         except Empty:
             pass
+
+
+class LoginDialog(tkSimpleDialog.Dialog):
+
+    def __init__(self, *args, **kwargs):
+        self.e1 = self.e2 = self.cb = None
+        tkSimpleDialog.Dialog.__init__(self, title="Login now...", *args, **kwargs)
+
+    def body(self, master):
+
+        Label(master, text="Username:").grid(row=0)
+        Label(master, text="Password:").grid(row=1)
+
+        self.e1 = Entry(master)
+        self.e2 = Entry(master, show="*")
+
+        self.e1.grid(row=0, column=1)
+        self.e2.grid(row=1, column=1)
+
+        self.cb = Checkbutton(master, text="Remember me?")
+        self.cb.grid(row=2, columnspan=2, sticky=W)
+
+        return self.e1  # initial focus
+
+    def apply(self):
+        first = int(self.e1.get())
+        second = int(self.e2.get())
+        print first, second  # TODO
 
 
 class GUI(Frame):
@@ -106,9 +134,13 @@ class GUI(Frame):
         menu_bar = Menu(self.parent)
         file_menu = Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="File", menu=file_menu)
+        file_menu.add_command(label="Login", command=lambda: LoginDialog(self.parent))
+        file_menu.add_separator()
         file_menu.add_command(label="Exit", command=lambda: self.on_close())
         help_menu = Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="Help", menu=help_menu)
+        help_menu.add_command(label="Guide", command=lambda: None)  # TODO
+        help_menu.add_separator()
         help_menu.add_command(
             label="About",
             command=lambda: tkMessageBox.showinfo("About "+self.title,
