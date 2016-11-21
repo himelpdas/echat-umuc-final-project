@@ -7,24 +7,57 @@ from ui import ChatUI
 key = '82aaee3b0f5c1e12' 
 
 #Constants
-
 HEADER_SIZE = 40 
 NET_BUF_SIZE = 1024
 ERROR = -1
 USERNAME = 1
 PASSWD = 2
 CHAT = 3
+EXIT = 4
+USERLIST = 5
 
 NOT_IMPLEMENTED = -1 
 FILE_MAGIC_NUM = 1024 
 SELECT_TIMEOUT = 2
 
+#inBox = Queue.Queue(0)
+clientSock = ''
 
-outBox = Queue.Queue(0)
-inBox = Queue.Queue(0)
+class StoppableQueueThread(threading.Thread):
+    """Thread class with a stop() method. The thread itself has to check
+    regularly for the stopped() condition."""
+    def __init__(self, ui, outBox):
+        threading.Thread.__init__(self)
+        self._stop = threading.Event()
+        self._lock = threading.RLock()
+        self.ui = ui
+        self.outBox = outBox
+    
+    def stop(self):
+        self._stop.set()
 
+    def stopped(self):
+        return self._stop.isSet() 
 
-
+class threadReadFromServer(StoppableQueueThread):
+    
+    def run(self):        
+        ui = self.ui
+        global clientSock      
+        
+        inputList = [clientSock]
+        while not self._stop.isSet():
+            self._lock.acquire()         
+            try:
+                readable, writeable, exceptional = select.select(inputList, [], inputList, SELECT_TIMEOUT)
+                if readable:
+                    cmd, cmdId, recBuf = myRecv(clientSock, key)
+                    if cmd == CHAT:
+                        ui.chatbuffer_add(recBuf)
+            finally:
+                self._lock.release()
+              
+#...
 def processHeader(msg):
 
     pCmd = msg[0:4]
@@ -107,6 +140,7 @@ def mySend(header, msg, sendSock, key):
                 if(bufLen > FILE_MAGIC_NUM):
                     print "Send Status: " + str(totalSent) + " of " + str(bufLen)
             notSent = False
+    return
     
 #..
 def myRecv(recvSock, key):
@@ -163,47 +197,38 @@ def myRecv(recvSock, key):
     return cmd, cmdId, buf
     
 #...
-def threadReadFromServer(tSock, ui):
-    print "Hi from the socket reader"    
-    inputList = [tSock]
-    while True:
-        readable, writeable, exceptional = select.select(inputList, [], inputList, SELECT_TIMEOUT)
-        if readable:
-            cmd, cmdId, recBuf = myRecv(tSock, key)
-            if cmd == CHAT:
-                ui.chatbuffer_add(recBuf)
-#...
-def threadWriter(tSock, ui, userName):
-    print "Hi from the socket writer"
-    while True:
-        while outBox.not_empty:
-            #print "sending" + item
-            item = "<" + userName + "> " + outBox.get() 
-            header = "%4s%4s%16s%16s" % (CHAT, 0,  binascii.crc32(item),  len(item))
-            mySend(header, item, tSock, key)
-            time.sleep(1)
-            
-#...
+def doShutdown(tSock, wThread):   
 
+    # set flag for threads
+    try:
+        wThread.stop()
+        wThread.join(5)
+        tSock.shutdown(socket.SHUT_WR)
+        tSock.close()
+        sys.exit(2)
+    except socket.error:
+        tSock.close()
+        sys.exit(3)
+      
+#...
 def main(stdscr):
     
     cmd = ''
     host = '127.0.0.1'
     port = 8080
     bufLen = 0 
-    
-    # select lists
-    inputList = []
-    outputList = []
+    outBox = Queue.Queue(0)
+    global clientSock
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    clientSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         # clear screen and set ui
         stdscr.clear()
         ui = ChatUI(stdscr)      
         
         # connect to server
-        s.connect((host, port))
+        clientSock.connect((host, port))
         ui.chatbuffer_add("Connected to: " + host)
 
         # authenticates users to remote service
@@ -211,59 +236,58 @@ def main(stdscr):
         
         # send username 
         header = "%4s%4s%16s%16s" % (USERNAME, 0,  binascii.crc32(username),  len(username))
-        mySend(header, username, s, key)                
-        cmd, cmdId, recBuf = myRecv(s, key)
+        mySend(header, username, clientSock, key)                
+        cmd, cmdId, recBuf = myRecv(clientSock, key)
         
         # no results from the server to indicate weather it's a valid username by design
         if(cmd == USERNAME):
             
             password = ui.wait_input("Password: ")
             header = "%4s%4s%16s%16s" % (PASSWD, 0,  binascii.crc32(password),  len(password))
-            mySend(header, password, s, key)                
+            mySend(header, password, clientSock, key)                
             #get response back from server 
-            cmd, cmdId, recBuf = myRecv(s, key)
+            cmd, cmdId, recBuf = myRecv(clientSock, key)
+        
+        # if we authenticated, awesome otherwise die    
         if(recBuf == 'OK'):
             ui.chatbuffer_add("Successfully Logged in")
         else:
-            s.close()
+            clientSock.close()
             sys.exit(-1)
         
+        # client is now authenticated
         ui.userlist.append(username)
         ui.redraw_userlist()
     
-        # start threads     
-        serverReader = threading.Thread(target=threadReadFromServer, args=(s, ui))    
-        clientWriter = threading.Thread(target=threadWriter, args=(s, ui, username))
-    
+        # start thread to send and recv messages
+        serverReader = threadReadFromServer(ui, outBox)       
         serverReader.start()            
-        clientWriter.start()        
     
+        # process user input
         while True:
         
             userInput = ui.wait_input("> ")
             if(userInput == "/quit"):
                 ui.chatbuffer_add("[*] Client Terminating")
-                s.shutdown(socket.SHUT_RDWR)
-                sys.exit(2) 
+                header = "%4s%4s%16s%16s" % (EXIT, 0,  binascii.crc32('aaaa'),  len('aaaa'))
+                mySend(header, 'aaaa', clientSock, key)                 
+                doShutdown(clientSock, serverReader)
+
             elif(userInput == "/help"):
                 ui.chatbuffer_add("--- Supported Commands ---")
                 ui.chatbuffer_add(" /help - this menu")
                 ui.chatbuffer_add(" /quit - quits ")
             else:
-                outBox.put(userInput)
-
+                userInput = "< " + username + " > " + userInput
+                header = "%4s%4s%16s%16s" % (CHAT, 0,  binascii.crc32(userInput),  len(userInput))
+                mySend(header, userInput, clientSock, key)                
            
     except socket.gaierror, e:
         print "Error connecting to server: %s" % e
         sys.exit(1)
     except KeyboardInterrupt:
         ui.chatbuffer_add("[*] Client Terminating")
-        s.shutdown(socket.SHUT_RDWR)
-        sys.exit(2)    
-    s.shutdown(socket.SHUT_RDWR)
-    s.close()
-    sys.exit(0)    
+        
+      
     
-
-
 wrapper(main)
