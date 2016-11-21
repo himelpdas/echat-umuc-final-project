@@ -30,15 +30,14 @@ key = '82aaee3b0f5c1e12'
 HEADER_SIZE = 40 
 NET_BUF_SIZE = 1024
 ERROR = -1
-ERROR = -1
 USERNAME = 1
 PASSWD = 2
 CHAT = 3
+EXIT = 4
+USERLIST = 5
 NOT_IMPLEMENTED = -1 
-FILE_MAGIC_NUM = 1024 
 SELECT_TIMEOUT = 2
 DEBUG = 1
-NUM_LINES_CLR = 512
 
 socketList = []
 
@@ -93,10 +92,7 @@ def mySend(header, msg, sendSock, key):
                 if sent == 0:
                     raise RuntimeError("[!] Error: mySend Error")
                 totalSent += sent
-                # use buffering
-                if(bufLen > FILE_MAGIC_NUM):
-                    if DEBUG:
-                        print "[Debug] Send Status: " + str(totalSent) + " of " + str(bufLen)
+
             notSent = False
     
 #..
@@ -118,9 +114,11 @@ def myRecv(recvSock, key):
     # get header
     while notRead:
         if DEBUG:
-            print "[Debug] Waiting for header" 
+            print "[Debug] myRecv(): Waiting for header  " 
         readable, writeable, exceptional = select.select(inputList, outputList, inputList, 0)
         if readable:
+            print "[Debug] myRecv(): socket is readable" 
+            
             while(bufRec < HEADER_SIZE):
                 headerBuf += recvSock.recv(NET_BUF_SIZE)
                 bufRec = len(headerBuf)
@@ -134,7 +132,7 @@ def myRecv(recvSock, key):
                 print "[Debug] Header for header recv is Command:" + str(cmd) + " Command Id:" + str(cmdId) + " CRC:" + str(crc) + " size:" + str(size)   
                 print "[Debug] bufRec is " + str(bufRec) 
             notRead = False
-            #ÍbufRec = 0
+            #bufRec = 0
             #bufLen = size
             # deal with small message
             if size != len(buf):
@@ -144,7 +142,7 @@ def myRecv(recvSock, key):
                #     buf += recvSock.recv(NET_BUF_SIZE)
                 #    bufRec = len(buf)                        
                  #   if bufRec == 0:
-                  #Í      raise RuntimeError("[!] Error: myRecv Error")          
+                  #      raise RuntimeError("[!] Error: myRecv Error")          
         else:
             if DEBUG:
                 print "[Debug] Waiting for header from client. "    
@@ -164,15 +162,23 @@ def inputOutputThread(lSocket):
     
     while True:
         buf = ''
-        readable, writeable, exceptional = select.select(socketList, [], socketList, SELECT_TIMEOUT)
+        readable, writeable, exceptional = select.select(socketList, [], [], SELECT_TIMEOUT)
         print "[Debug] inputOutputThread: Thread select loop"
         if(readable):
             for clientSock in readable:
+                print "[Debug] inputOutputThread: clientSock is readable"
                 cmd, cmdId, buf = myRecv(clientSock, key)
                 if(cmd == CHAT):
                     for s in socketList:
                         header = "%4s%4s%16s%16s" % (CHAT, 0,  binascii.crc32(buf),  len(buf))
                         mySend(header, buf, s, key)
+                elif(cmd == EXIT):
+                    print "[Debug] got Exit from client"
+                    socketList.remove(clientSock)
+                    #clientSock.shutdown(socket.SHUT_RDWR)
+                    #clientSock.close()
+                    # update user list
+                    
                 else:
                     print "[Debug] inputOutputThread:  non-chat returned from myRecv. cmd " + str(cmd) + " buf: " + buf
                 
@@ -205,7 +211,8 @@ def main():
                 header = "%4s%4s%16s%16s" % (USERNAME, 0,  binascii.crc32(username),  len(username))
                 mySend(header, username, clientsock, key)                
             else:
-                print("[?] Expected username got " )
+                print("[?] Expected username got " + cmd)
+                clientsock.close()
             cmd, cmdId, buf = myRecv(clientsock, key)
             if(cmd == PASSWD):
                 password = buf
@@ -237,6 +244,7 @@ def main():
         except KeyboardInterrupt:
             print "[*] Server Terminating"
             s.shutdown(socket.SHUT_RDWR)
+            s.close()
             sys.exit(2)
         except:
             traceback.print_exc()
