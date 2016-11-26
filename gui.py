@@ -9,17 +9,19 @@ import random
 import datetime
 import time
 
+# client gui integration
+from client import main as client
 
-dummy_names = ["Dachelle", "David", "Himel", "John", "Julia", "Robert", "Sally", "Trisha"]
+dummy_names = ["Dachelle", "David", "Himel", "John", "Julia", "Robert", "Sally", "Trisha"]  # for experimenting only
 
 lorem_ipsum = "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et " \
               "dolore magna aliqua ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip " \
               "ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore " \
               "eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia " \
-              "deserunt mollit anim id est laborum".split(" ")
+              "deserunt mollit anim id est laborum".split(" ")  # for experimenting only
 
 
-def dummy_server_process(queue, kill):
+def dummy_server_process(queue, kill_queue):  # for experimenting only
     while 1:
         fragments = random.sample(lorem_ipsum, random.choice(range(1, 15)))
         fragments[0] = fragments[0].capitalize()
@@ -30,7 +32,7 @@ def dummy_server_process(queue, kill):
         time.sleep(random.choice(range(1, 5)))
 
         try:
-            if kill.get_nowait():
+            if kill_queue.get_nowait():
                 print "dummy server killed!"
                 break
         except Empty:
@@ -39,9 +41,11 @@ def dummy_server_process(queue, kill):
 
 class LoginDialog(tkSimpleDialog.Dialog):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, parent, up_queue, down_queue):
+        self.up_queue = up_queue
+        self.down_queue = down_queue
         self.e1 = self.e2 = self.cb = None
-        tkSimpleDialog.Dialog.__init__(self, title="Login now...", *args, **kwargs)
+        tkSimpleDialog.Dialog.__init__(self, parent, title="Login now...")
 
     def body(self, master):
 
@@ -60,28 +64,30 @@ class LoginDialog(tkSimpleDialog.Dialog):
         return self.e1  # initial focus
 
     def apply(self):
-        first = int(self.e1.get())
-        second = int(self.e2.get())
-        print first, second  # TODO
+        self.up_queue.put(self.e1.get())
+        self.up_queue.put(self.e2.get())
 
 
 class GUI(Frame):
 
     colors = {'red', 'blue', 'green', 'orange', 'purple', 'yellow', 'teal', 'pink', 'grey'}
 
-    def __init__(self, parent, queue, kill, title):
+    def __init__(self, parent, up_queue, down_queue, title):
         Frame.__init__(self, parent)
 
         # init args
         self.parent = parent
-        self.queue = queue
-        self.kill = kill  # temp
+        # self.queue = queue  # for experimenting only
+        # self.kill_queue = kill_queue  # for experimenting only
+        self.up_queue = up_queue
+        self.down_queue = down_queue
         self.title = title
 
         # helper variables
         self._listbox_previous_select = None
         self._listbox_current_select = None
-        self._default_user_colors = {}
+        self._default_user_colors = {'EChatr': {'fg': 'black', 'bg': 'white'}}
+        self._color_generator = self.colorize_names()
         self._blink = False
 
         # declare widgets
@@ -91,7 +97,7 @@ class GUI(Frame):
         self.message_entry = None
 
         # user info
-        self.this_user = dummy_names[0]
+        self.this_user = None
 
         # init widgets
         self.init_menu()
@@ -107,7 +113,7 @@ class GUI(Frame):
         self.task_loop()
 
     def on_close(self):
-        self.kill.put(True)  # kill dummy server
+        self.up_queue.put("/quit")  # kill dummy server
         self.parent.destroy()
 
     def task_loop(self):
@@ -116,8 +122,26 @@ class GUI(Frame):
             self.messages.tag_config(self._listbox_current_select, underline=self._blink)
 
         try:
-            incoming = self.queue.get_nowait()
-            self.add_message(*incoming)
+            incoming = self.down_queue.get_nowait()
+            incoming_type = incoming[0]
+
+            if incoming_type == "message":
+                self.add_message(*incoming[1:])
+
+            elif incoming_type == "system":
+                system_type = incoming[2]
+                if system_type == "login_success":
+                    self.this_user = incoming[1]
+
+            elif incoming_type == "user":
+                add = incoming[2]
+                name = incoming[1]
+                if add:
+                    self.add_user(name)
+                else:  # remove
+                    # self.del_user(user)
+                    pass
+
         except Empty:
             pass
         finally:
@@ -134,7 +158,7 @@ class GUI(Frame):
         menu_bar = Menu(self.parent)
         file_menu = Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="Login", command=lambda: LoginDialog(self.parent))
+        file_menu.add_command(label="Login", command=lambda: LoginDialog(self.parent, self.up_queue, self.down_queue))
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=lambda: self.on_close())
         help_menu = Menu(menu_bar, tearoff=0)
@@ -153,6 +177,25 @@ class GUI(Frame):
                                                   )
         )
         self.parent.config(menu=menu_bar)
+
+    def colorize_names(self):
+        # colorize default system Echatr log
+        _fg = self._default_user_colors['EChatr']['fg']
+        _bg = self._default_user_colors['EChatr']['bg']
+        self.messages.tag_config('EChatr', background=_bg, foreground=_fg)  # color EChatr occurrences in the messages
+
+        _last_bg, _last_fg = [], []
+        while True:
+            name = yield
+            print name
+            self.users.insert(0, name)  # opposite of END
+            _fg = random.choice(list(self.colors.difference(_last_fg)))
+            _last_fg = [_fg]
+            _bg = random.choice(list(self.colors.difference(_last_fg+_last_bg)))  # ensure different colors each row
+            _last_bg = [_bg]
+            self.users.itemconfig(0, {'fg': _fg, 'bg': _bg})  # color the name on the user list
+            self._default_user_colors[name] = {'fg': _fg, 'bg': _bg}
+            self.messages.tag_config(name, background=_bg, foreground=_fg)  # color name occurrences in the messages
 
     def init_ui(self):
 
@@ -177,16 +220,8 @@ class GUI(Frame):
                              exportselection=False,  # ensure selection even when clicking outside http://bit.ly/2fQb8Qq
                              selectbackground="turquoise")
         self.users.bind("<<ListboxSelect>>", self.listbox_select_callback)  # http://bit.ly/2erzieI
-        _last_bg, _last_fg = [], []
-        for name in dummy_names:
-            self.users.insert(0, name)  # opposite of END
-            _fg = random.choice(list(self.colors.difference(_last_fg)))
-            _last_fg = [_fg]
-            _bg = random.choice(list(self.colors.difference(_last_fg+_last_bg)))  # ensure different colors each row
-            _last_bg = [_bg]
-            self.users.itemconfig(0, {'fg': _fg, 'bg': _bg})
-            self._default_user_colors[name] = {'fg': _fg, 'bg': _bg}
-            self.messages.tag_config(name, background=_bg, foreground=_fg)
+
+        self._color_generator.next()  # also .send(None) works
 
         self.panel.add(self.users)
         self.panel.add(self.messages)
@@ -219,19 +254,40 @@ class GUI(Frame):
             self.message_entry.delete(0, END)
 
     def add_message(self, name, message):
+        send = True
+        if not self.this_user:
+            send = False
+            if name != "EChatr":  # means system message
+                "is not system message"
+                name = "EChatr"
+                message = "Message not sent! Please login first."
+
         line = "<%s> %s %s\n\n" % (name, datetime.datetime.now().strftime("%I:%M:%S %p"), message)
         self.messages.insert("1.0", line)
         self.messages.tag_add(name, "1.0", "1.%s" % (len(name)+14))  # additional len for time and <>
 
+        if send:
+            self.up_queue.put(message)
+
+    def add_user(self, name):
+        self._color_generator.send(name)
 
 def main():
-    queue = Queue()
-    kill = Queue()
-    p = Process(target=dummy_server_process, args=(queue, kill))
-    p.start()
+    up_queue = Queue()  # GUI TO CLIENT COMMUNICATION
+    down_queue = Queue()  # CLIENT TO GUI COMMUNICATION
+
+    # # for experimenting only # #
+    # queue = Queue()
+    # kill_queue = Queue()
+    # p = Process(target=dummy_server_process, args=(queue, down_queue, kill_queue))
+    # p.start()
+    # # # #
+
+    client_process = Process(target=client, args=(up_queue, down_queue))  # for experimenting only
+    client_process.start()
 
     root = Tk()
-    app = GUI(root, queue, kill, "EChatr - Encrypted Chat System")
+    app = GUI(root, up_queue, down_queue, "EChatr - Encrypted Chat System")
     app.set_centered_geometry()
     root.mainloop()
 
