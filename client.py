@@ -27,11 +27,10 @@ class StoppableQueueThread(threading.Thread):
     """Thread class with a stop() method. The thread itself has to check
     regularly for the stopped() condition."""
     # def __init__(self, ui, outBox):
-    def __init__(self, outBox, down_queue):
+    def __init__(self, down_queue):
         threading.Thread.__init__(self)
         self._stop = threading.Event()
         self._lock = threading.RLock()
-        self.outBox = outBox
         self.down_queue = down_queue
 
     def stop(self):
@@ -54,6 +53,9 @@ class threadReadFromServer(StoppableQueueThread):
                     cmd, cmdId, recBuf = myRecv(clientSock, key)
                     if cmd == CHAT:
                         user, message = recBuf[1:].split(">")
+                        user = user.strip()
+                        message = message.strip()
+                        print user, message
                         self.down_queue.put(["message", user, message])
             finally:
                 self._lock.release()
@@ -276,7 +278,7 @@ def main(up_queue, down_queue):
         # ui.redraw_userlist()
 
         # start thread to send and recv messages
-        serverReader = threadReadFromServer(outBox, down_queue)
+        serverReader = threadReadFromServer(down_queue)
         serverReader.start()            
     
         # process user input
@@ -294,7 +296,7 @@ def main(up_queue, down_queue):
                 print " /help - this menu"
                 print " /quit - quits "
             else:
-                userInput = "< " + username + " > " + userInput
+                print userInput
                 header = "%4s%4s%16s%16s" % (CHAT, 0,  binascii.crc32(userInput),  len(userInput))
                 mySend(header, userInput, clientSock, key)                
            

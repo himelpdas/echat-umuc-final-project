@@ -22,7 +22,8 @@ from Crypto.Hash import SHA256
 
 secrets = {'user': '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
            'jamie': '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
-           'himel': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824'}
+           'himel': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
+           'john': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824'}
 """
 >>> p = SHA256.new()
 >>> p.update("hello")

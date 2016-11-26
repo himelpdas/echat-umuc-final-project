@@ -250,24 +250,22 @@ class GUI(Frame):
     def message_entry_callback(self, evt):
         new = self.message_entry.get()
         if new:
-            self.add_message(self.this_user, new)
+            self.send_message(self.this_user, new)
             self.message_entry.delete(0, END)
 
-    def add_message(self, name, message):
-        send = True
-        if not self.this_user:
-            send = False
-            if name != "EChatr":  # means system message
-                "is not system message"
-                name = "EChatr"
-                message = "Message not sent! Please login first."
+    def send_message(self, name, message):
+        if self.this_user:
+            send = "< " + name + " > " + message
+            self.up_queue.put(send)
+        else:
+            name = "EChatr"
+            message = "Message not sent! Please login first."
+            self.add_message(name, message)
 
+    def add_message(self, name, message):
         line = "<%s> %s %s\n\n" % (name, datetime.datetime.now().strftime("%I:%M:%S %p"), message)
         self.messages.insert("1.0", line)
         self.messages.tag_add(name, "1.0", "1.%s" % (len(name)+14))  # additional len for time and <>
-
-        if send:
-            self.up_queue.put(message)
 
     def add_user(self, name):
         self._color_generator.send(name)
