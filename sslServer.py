@@ -214,6 +214,7 @@ def main():
             print "[*] Client Connected From: ", clientsock.getpeername() 
             # check pass on new client sock. 
             cmd, cmdId, buf = myRecv(clientsock, key)
+            print buf
             if(cmd == USERNAME):
                 username = buf
                 print '[Debug] username is ' + username

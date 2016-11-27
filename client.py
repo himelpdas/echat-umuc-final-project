@@ -298,7 +298,7 @@ def main(up_queue, down_queue):
             else:
                 print userInput
                 header = "%4s%4s%16s%16s" % (CHAT, 0,  binascii.crc32(userInput),  len(userInput))
-                mySend(header, userInput, clientSock, key)                
+                mySend(header, userInput, clientSock, key)  # fixme - David it looks like the server is not getting this
            
     except socket.gaierror, e:
         print "Error connecting to server: %s" % e
