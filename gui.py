@@ -250,16 +250,16 @@ class GUI(Frame):
         self.add_message("EChatr", "\n<----------------EChatr Help---------------->"
         "\n\nUsing EChatr is very simple. To start, go to file -> login -> enter the Server IP or domain name, "
         "the Server port number, the username and the password. If you would automatically like to "
-        'connect with these credentials on application startup, simply select "remember me?" Your credentials are '
+        'connect with these credentials on program startup, simply select "remember me?" Your credentials are '
         "stored safely in the operating system's keyring system (i.e. OSX KeyChain). Note, you will not be able to "
         "send messages until you are logged in."
         "\n\n[--------Fast Commands--------]"
         "\n\nTo use fast commands you must be logged in. Simply enter these commands in the message box."
         "\n\n/help - (from menu: help -> guide) Show this menu."
         "\n\n/quit - Immediately quit server link and EChatr Client Process. Login again to "
-        "restart the EChatr Client process and reconnect to the server. This is useful to pause chatting without"
-        "closing the entire application."
-        "\n\n/exit - (from menu: file -> exit) Exit the entire application. This will also quit "
+        "restart the EChatr Client process and reconnect to the server. This is useful to pause chatting without "
+        "closing the entire program."
+        "\n\n/exit - (from menu: file -> exit) Exit the entire program. This will also quit "
         "the EChatr Client Process.")
 
     def init_menu(self):
@@ -395,6 +395,20 @@ class GUI(Frame):
         """ returns the squared euclidean distance between two color vectors in yuv space """
         return sum((a-b)**2 for a, b in zip(GUI.to_ycc(c1), GUI.to_ycc(c2)))
 
+    def set_embedded_icon(self):  # http://bit.ly/2fYgMfK  # http://bit.ly/2fYlB8E
+        icon = '''R0lGODdhFQAVAPMAAAQ2PESapISCBASCBMTCxPxmNCQiJJya/ISChGRmzPz+/PxmzDQyZDQyZDQy
+        ZDQyZCwAAAAAFQAVAAAElJDISau9Vh2WMD0gqHHelJwnsXVloqDd2hrMm8pYYiSHYfMMRm53ULlQ
+        HGFFx1MZCciUiVOsPmEkKNVp3UBhJ4Ohy1UxerSgJGZMMBbcBACQlVhRiHvaUsXHgywTdycLdxyB
+        gm1vcTyIZW4MeU6NgQEBXEGRcQcIlwQIAwEHoioCAgWmCZ0Iq5+hA6wIpqislgGhthEAOw=='''
+        img = PhotoImage(data=icon)
+        self.parent.tk.call('wm', 'iconphoto', self.parent._w, img)
+
+    def set_bitmap_icon(self):
+        """Under Windows, the DEFAULT parameter can be used to set the icon for the widget and any descendants that
+        don't have an icon set explicitly. DEFAULT can be the relative path to a .ico file
+        (example: root.iconbitmap(default='myicon.ico') ). See Tk documentation for more information."""
+        self.parent.wm_iconbitmap(default="icon.ico")
+
 
 def main():
 
@@ -408,6 +422,7 @@ def main():
     root = Tk()
     app = GUI(root, "EChatr - Encrypted Chat System")
     app.set_centered_geometry()
+    app.set_bitmap_icon()
     root.mainloop()
 
 
