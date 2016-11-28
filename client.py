@@ -231,15 +231,15 @@ def main(up_queue, down_queue):
         # stdscr.clear()
         # ui = ChatUI(stdscr)
 
-        # connect to server
-        clientSock.connect((host, port))
-        # ui.chatbuffer_add("Connected to: " + host)
-        down_queue.put(["message", "EChatr", "Connected to: " + host])
-        down_queue.put(["message", "EChatr", "Please login now"])
-
         # authenticates users to remote service
 
+        username = None
         while True:
+            # connect to server
+            clientSock.connect((host, port))
+            # ui.chatbuffer_add("Connected to: " + host)
+            down_queue.put(["message", "EChatr", "Connected to: " + host])
+            down_queue.put(["message", "EChatr", "Please login now"])
             # username = ui.wait_input("Username: ")  # before ui.py removal
             # username = raw_input("Username: ")  # after ui.py removal
             username = up_queue.get()  # after gui.py integration  # block here to wait for username from GUI
@@ -270,6 +270,9 @@ def main(up_queue, down_queue):
                 break
             else:
                 down_queue.put(["message", "EChatr", "Login failed. Try again!"])
+                clientSock.close()  # socket file descriptor appears to get destroyed
+                down_queue.put(["message", "EChatr", "Reconnecting to server..."])
+                clientSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # so make new one
 
         # client is now authenticated
         # ui.userlist.append(username) #TODO

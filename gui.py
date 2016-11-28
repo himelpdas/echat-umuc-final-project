@@ -1,42 +1,18 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+# for testing before client gui integration and other experimental features
+# from dummy import *
+
+# actual client gui integration begins
+from client import main as client
+
 from Tkinter import *
 import tkMessageBox, tkSimpleDialog
 from multiprocessing import Process, Queue
 from Queue import Empty
 import random
 import datetime
-import time
-
-# client gui integration
-from client import main as client
-
-dummy_names = ["Dachelle", "David", "Himel", "John", "Julia", "Robert", "Sally", "Trisha"]  # for experimenting only
-
-lorem_ipsum = "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et " \
-              "dolore magna aliqua ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip " \
-              "ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore " \
-              "eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia " \
-              "deserunt mollit anim id est laborum".split(" ")  # for experimenting only
-
-
-def dummy_server_process(queue, kill_queue):  # for experimenting only
-    while 1:
-        fragments = random.sample(lorem_ipsum, random.choice(range(1, 15)))
-        fragments[0] = fragments[0].capitalize()
-        message = " ".join(fragments)
-        message += (random.choice(["!", "?", "."]))
-        print "dummy server: %s" % message
-        queue.put([random.choice(dummy_names[1:]), message])
-        time.sleep(random.choice(range(1, 5)))
-
-        try:
-            if kill_queue.get_nowait():
-                print "dummy server killed!"
-                break
-        except Empty:
-            pass
 
 
 class LoginDialog(tkSimpleDialog.Dialog):
@@ -44,10 +20,10 @@ class LoginDialog(tkSimpleDialog.Dialog):
     def __init__(self, parent, up_queue, down_queue):
         self.up_queue = up_queue
         self.down_queue = down_queue
-        self.e1 = self.e2 = self.cb = None
+        self.e1 = self.e2 = self.cb = self.er = self.un = self.pw = None  # entry 1, 2, checkbox, err label, user, pass
         tkSimpleDialog.Dialog.__init__(self, parent, title="Login now...")
 
-    def body(self, master):
+    def body(self, master):  # called by the init tkSimpleDialog.Dialog.__init__
 
         Label(master, text="Username:").grid(row=0)
         Label(master, text="Password:").grid(row=1)
@@ -61,11 +37,31 @@ class LoginDialog(tkSimpleDialog.Dialog):
         self.cb = Checkbutton(master, text="Remember me?")
         self.cb.grid(row=2, columnspan=2, sticky=W)
 
+        self.er = Label(master, fg="red")
+
         return self.e1  # initial focus
 
+    def validate(self):
+        '''validate the data
+
+        This method is called automatically to validate the data before the
+        dialog is destroyed. By default, it always validates OK.
+        '''
+        self.un = self.e1.get()
+        self.pw = self.e2.get()
+        if not (self.un and self.pw):
+            if not self.un:
+                empty = "Username"
+            elif not self.pw:
+                empty = "Password"
+            self.er.grid(row=3, column=1)
+            self.er.config(text="%s is blank!" % empty)
+            return 0
+        return 1  # override
+
     def apply(self):
-        self.up_queue.put(self.e1.get())
-        self.up_queue.put(self.e2.get())
+        self.up_queue.put(self.un)
+        self.up_queue.put(self.pw)
 
 
 class GUI(Frame):
@@ -247,7 +243,7 @@ class GUI(Frame):
         self.messages.tag_config(self._listbox_current_select, background="turquoise", foreground="white")
         self._listbox_previous_select = self._listbox_current_select
 
-    def message_entry_callback(self, evt):
+    def message_entry_callback(self, evt):  # event object http://bit.ly/2fUt88N
         new = self.message_entry.get()
         if new:
             self.send_message(self.this_user, new)
@@ -281,7 +277,7 @@ def main():
     # p.start()
     # # # #
 
-    client_process = Process(target=client, args=(up_queue, down_queue))  # for experimenting only
+    client_process = Process(target=client, args=(up_queue, down_queue))
     client_process.start()
 
     root = Tk()
