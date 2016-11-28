@@ -299,7 +299,7 @@ def main(up_queue, down_queue):
             if(userInput == "/quit"):
                 print "[*] Client Terminating"
                 header = "%4s%4s%16s%16s" % (EXIT, 0,  binascii.crc32('aaaa'),  len('aaaa'))
-                mySend(header, 'aaaa', clientSock, key)                 
+                mySend(header, 'aaaa', clientSock, key)
                 doShutdown(clientSock, serverReader)
 
             elif(userInput == "/help"):
@@ -313,15 +313,24 @@ def main(up_queue, down_queue):
            
     except (socket.gaierror, socket.error, KeyboardInterrupt), e:
         down_queue.put(["message", "EChatr", "EChatr Client Process Fatal Error: %s" % e])
-        seconds_to_kill = 10
-        down_queue.put(["system", seconds_to_kill * 1000, "shutdown"])  # 1 for add -1 for remove
-        down_queue.put(["message", "EChatr", "Shutting down in %s seconds..." % seconds_to_kill])
-        while seconds_to_kill != 0:
-            time.sleep(1)
-            seconds_to_kill -= 1
-            if seconds_to_kill % 2 == 0:
-                down_queue.put(["message", "EChatr", "%s... %s..." % (seconds_to_kill + 1 , seconds_to_kill)])
-        sys.exit(1)
+        gui_quit_countdown(10, down_queue, up_queue, lambda: sys.exit(1))
+
+
+def gui_quit_countdown(seconds_to_kill, down_queue, up_queue, quit_callback):
+    down_queue.put(["system", seconds_to_kill * 1000, "shutdown"])  # 1 for add -1 for remove
+    down_queue.put(["message", "EChatr", "Shutting down in %s seconds..." % seconds_to_kill])
+    while seconds_to_kill != 0:
+        try:  # if GUI quits before countdown, then quit this process immediately
+            if "/quit" == up_queue.get_nowait():
+                break
+        except Queue.Empty:
+            pass
+        time.sleep(1)
+        seconds_to_kill -= 1
+        if seconds_to_kill % 2 == 0:
+            down_queue.put(["message", "EChatr", "%s... %s..." % (seconds_to_kill + 1, seconds_to_kill)])
+
+    quit_callback()
 
 # wrapper(main)
 if __name__ == "__main__":
