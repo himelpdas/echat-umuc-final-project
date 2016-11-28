@@ -313,10 +313,10 @@ def main(up_queue, down_queue):
            
     except (socket.gaierror, socket.error, KeyboardInterrupt), e:
         down_queue.put(["message", "EChatr", "EChatr Client Process Fatal Error: %s" % e])
-        gui_quit_countdown(10, down_queue, up_queue, lambda: sys.exit(1))
+        gui_quit_countdown(10, up_queue, down_queue, lambda: sys.exit(1))
 
 
-def gui_quit_countdown(seconds_to_kill, down_queue, up_queue, quit_callback):
+def gui_quit_countdown(seconds_to_kill, up_queue, down_queue, quit_callback):
     down_queue.put(["system", seconds_to_kill * 1000, "shutdown"])  # 1 for add -1 for remove
     down_queue.put(["message", "EChatr", "Shutting down in %s seconds..." % seconds_to_kill])
     while seconds_to_kill != 0:
