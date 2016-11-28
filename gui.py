@@ -133,6 +133,7 @@ class GUI(Frame):
         self.messages = None
         self.message_entry = None
         self.message_label = None
+        self.scrollbar = None
 
         # init widgets
         self.init_menu()
@@ -319,7 +320,7 @@ class GUI(Frame):
         self.panel = PanedWindow(frame, orient=HORIZONTAL, relief=RAISED, borderwidth=1, showhandle=True)
         self.panel.pack(fill=BOTH, side=LEFT, expand=True)
 
-        scrollbar = Scrollbar(frame)
+        self.scrollbar = scrollbar = Scrollbar(frame)
         scrollbar.pack(side=RIGHT, fill=Y)
 
         frame.pack(fill=BOTH, expand=True)
@@ -366,6 +367,7 @@ class GUI(Frame):
         if new:
             self.send_message(self.un, new)
             self.message_entry.delete(0, END)
+            self.messages.see("1.0")  # scroll to top when entering a message
 
     def send_message(self, name, message):
         send = (name, message)
