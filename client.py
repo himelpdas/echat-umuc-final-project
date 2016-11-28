@@ -301,7 +301,7 @@ def main(up_queue, down_queue):
             else:
                 print userInput
                 header = "%4s%4s%16s%16s" % (CHAT, 0,  binascii.crc32(userInput),  len(userInput))
-                mySend(header, userInput, clientSock, key)  # fixme - David it looks like the server is not getting this
+                mySend(header, userInput, clientSock, key)  # Fixed - David it looks like the server is not getting this
            
     except (socket.gaierror, socket.error, KeyboardInterrupt), e:
         down_queue.put(["message", "EChatr", "EChatr Client Process Fatal Error: %s" % e])
