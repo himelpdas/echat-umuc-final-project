@@ -1,7 +1,7 @@
 import socket, select, sys, commands, binascii, os, getpass, Queue, threading, time
 from Crypto.Cipher import ARC4
-from curses import wrapper
-from ui import ChatUI
+#from curses import wrapper
+#from ui import ChatUI
 
 
 key = '82aaee3b0f5c1e12' 
@@ -314,7 +314,6 @@ def main(up_queue, down_queue):
             if seconds_to_kill % 2 == 0:
                 down_queue.put(["message", "EChatr", "%s... %s..." % (seconds_to_kill + 1 , seconds_to_kill)])
         sys.exit(1)
-
 
 # wrapper(main)
 if __name__ == "__main__":

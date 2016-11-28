@@ -46,7 +46,7 @@ EXIT = 4
 USERLIST = 5
 NOT_IMPLEMENTED = -1 
 SELECT_TIMEOUT = 2
-DEBUG = 1
+DEBUG = 0
 
 socketList = []
 
@@ -168,8 +168,11 @@ def myRecv(recvSock, key):
     
 #...
 def inputOutputThread(lSocket):
-    
+    print "[Debug] inputOutputThread: Start"
+
     while True:
+        if not socketList:
+            continue
         buf = ''
         readable, writeable, exceptional = select.select(socketList, [], [], SELECT_TIMEOUT)
         print "[Debug] inputOutputThread: Thread select loop"
