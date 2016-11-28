@@ -14,6 +14,7 @@ from Queue import Empty
 import random
 import datetime
 
+DEBUG = 0
 
 class LoginDialog(tkSimpleDialog.Dialog):
 
@@ -121,25 +122,35 @@ class GUI(Frame):
             incoming = self.down_queue.get_nowait()
             incoming_type = incoming[0]
 
+        except Empty:
+            if DEBUG:
+                print "[Debug] Down Queue Empty"
+            pass
+
+        else:
             if incoming_type == "message":
                 self.add_message(*incoming[1:])
 
             elif incoming_type == "system":
                 system_type = incoming[2]
+
                 if system_type == "login_success":
                     self.this_user = incoming[1]
+
+                if system_type == "shutdown":
+                    self.parent.after(incoming[1], self.on_close)
 
             elif incoming_type == "user":
                 add = incoming[2]
                 name = incoming[1]
+
                 if add:
                     self.add_user(name)
+
                 else:  # remove
                     # self.del_user(user)
                     pass
 
-        except Empty:
-            pass
         finally:
             self.parent.after(200, self.task_loop)  # update gui event loop
 
