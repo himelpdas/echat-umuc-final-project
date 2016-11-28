@@ -166,6 +166,8 @@ class GUI(Frame):
         self.parent.destroy()
 
     def reset_styling(self):
+        if self._listbox_current_select:
+            self.messages.tag_config(self._listbox_current_select, underline=False)
         self._listbox_previous_select = None
         self._listbox_current_select = None
         self.users.delete(0, END)  # reset the list box
