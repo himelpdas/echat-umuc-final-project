@@ -306,11 +306,7 @@ def main(up_queue, down_queue):
                                           post="Application shutting down.")  # shutdown application
 
             elif message == "/help":
-                down_queue.put(["message", "EChatr", "----Text Commands----"])
-                down_queue.put(["message", "EChatr",  "/help - Show this menu"])
-                down_queue.put(["message", "EChatr",  "/quit - Immediately quit server link and EChatr Client Process"])
-                down_queue.put(["message", "EChatr",  "/exit - Shut down the entire application"])
-                down_queue.put(["message", "EChatr", "----Text Commands----"])
+                down_queue.put(["system", "show_help_messages", "run_method"])
 
             else:
                 userInput = "< " + name + " > " + message
@@ -355,6 +351,7 @@ def gui_client_quit_countdown(seconds_to_kill, up_queue, down_queue, quit_callba
     if post:
         down_queue.put(["message", "EChatr", post])
 
+    # prevent anything from messing up the queue during Echatr Client Process reset
     down_queue.put(["system", "message_entry", "disable_widget"])
 
     quit_callback()

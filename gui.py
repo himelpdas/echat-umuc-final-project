@@ -138,7 +138,7 @@ class GUI(Frame):
         self.init_menu()
         self.init_ui()
 
-        self.add_message("EChatr", "Please login now! See the guide in the help menu for more info.")
+        self.show_help_messages()
 
         # set dimensions
         parent.update()  # force app width and height to update before mainloop  http://bit.ly/2eroHkk
@@ -222,6 +222,9 @@ class GUI(Frame):
                 if system_type == "enable_widget":
                     getattr(self, incoming[1]).config(state=NORMAL)
 
+                if system_type == "run_method":
+                    getattr(self, incoming[1])()
+
             elif incoming_type == "user":
                 add = incoming[2]
                 name = incoming[1]
@@ -243,6 +246,22 @@ class GUI(Frame):
         self.parent.geometry("%sx%s+%s+%s" % (self.default_x, self.default_y, x_offset, y_offset))
         self.panel.sash_place(0, self.default_x / 4, 0)
 
+    def show_help_messages(self):
+        self.add_message("EChatr", "\n<----------------EChatr Help---------------->"
+        "\n\nUsing EChatr is very simple. To start, go to file -> login -> enter the Server IP or domain name, "
+        "the Server port number, the username and the password. If you would automatically like to "
+        'connect with these credentials on application startup, simply select "remember me?" Your credentials are '
+        "stored safely in the operating system's keyring system (i.e. OSX KeyChain). Note, you will not be able to "
+        "send messages until you are logged in."
+        "\n\n[--------Fast Commands--------]"
+        "\n\nTo use fast commands you must be logged in. Simply enter these commands in the message box."
+        "\n\n/help - (from menu: help -> guide) Show this menu."
+        "\n\n/quit - Immediately quit server link and EChatr Client Process. Login again to "
+        "restart the EChatr Client process and reconnect to the server. This is useful to pause chatting without"
+        "closing the entire application."
+        "\n\n/exit - (from menu: file -> exit) Exit the entire application. This will also quit "
+        "the EChatr Client Process.")
+
     def init_menu(self):
         menu_bar = Menu(self.parent)
         file_menu = Menu(menu_bar, tearoff=0)
@@ -252,7 +271,7 @@ class GUI(Frame):
         file_menu.add_command(label="Exit", command=lambda: self.on_close())
         help_menu = Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="Help", menu=help_menu)
-        help_menu.add_command(label="Guide", command=lambda: None)  # TODO
+        help_menu.add_command(label="Guide", command=lambda: self.up_queue.put((None, "/help")))  # TODO
         help_menu.add_separator()
         help_menu.add_command(
             label="About",
