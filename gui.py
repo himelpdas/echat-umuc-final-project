@@ -13,6 +13,8 @@ from multiprocessing import Process, Queue
 from Queue import Empty
 import random
 import datetime
+import keyring
+import json
 # import psutil
 
 DEBUG = 0
@@ -31,18 +33,31 @@ class LoginDialog(tkSimpleDialog.Dialog):
         Label(master, text="Username:").grid(row=0)
         Label(master, text="Password:").grid(row=1)
 
-        self.e1 = Entry(master)
-        self.e2 = Entry(master, show="*")
+        self.e1 = StringVar()
+        self.e2 = StringVar()
+        e1 = Entry(master, textvariable=self.e1)
+        e2 = Entry(master, show="*", textvariable=self.e2)
+        e1.grid(row=0, column=1)
+        e2.grid(row=1, column=1)
 
-        self.e1.grid(row=0, column=1)
-        self.e2.grid(row=1, column=1)
-
-        self.cb = Checkbutton(master, text="Remember me?")
-        self.cb.grid(row=2, columnspan=2, sticky=W)
+        self.cb = IntVar()
+        cb = Checkbutton(master, text="Remember me?", variable=self.cb)
+        cb.grid(row=2, columnspan=2, sticky=W)
 
         self.er = Label(master, fg="red")
 
-        return self.e1  # initial focus
+        try:
+            login = json.loads(keyring.get_password("echatr", "login"))
+        except (ValueError, TypeError):  # something went wrong
+            keyring.set_password("echatr", "login", json.dumps({}))
+            login = {}
+
+        if login:
+            self.e1.set(login["username"])
+            self.e2.set(login["password"])
+            self.cb.set(login["remember"])
+
+        return e1  # initial focus
 
     def validate(self):
         """validate the data
@@ -69,6 +84,13 @@ class LoginDialog(tkSimpleDialog.Dialog):
 
         self.parent.un = self.un
         self.parent.pw = self.pw
+        remember = self.cb.get()
+
+        if remember:
+            keyring.set_password("echatr", "login",
+                                 json.dumps({"username": self.un, "password": self.pw, "remember": 1}))
+        else:
+            keyring.set_password("echatr", "login", json.dumps({}))
 
         self.parent.re_login()
 
@@ -250,7 +272,7 @@ class GUI(Frame):
             while 1:
                 _fg = (random.randint(0,255), random.randint(0,255), random.randint(0,255))
                 _bg = (random.randint(0,255), random.randint(0,255), random.randint(0,255))
-                if GUI.color_dist(_fg, _bg) > 0.4:
+                if GUI.color_dist(_fg, _bg) > 0.444:
                     _fg = "#%02x%02x%02x" % _fg
                     _bg = "#%02x%02x%02x" % _bg
                     my_colors = {'fg': _fg, 'bg': _bg}
