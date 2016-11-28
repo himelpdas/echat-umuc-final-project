@@ -169,7 +169,7 @@ class GUI(Frame):
         self._listbox_previous_select = None
         self._listbox_current_select = None
         self.users.delete(0, END)  # reset the list box
-        self.message_label.config(text="< guest > Login First! ",
+        self.message_label.config(text=" <guest> Login First! ",
                                   fg="black",
                                   bg="white")
 
@@ -205,7 +205,7 @@ class GUI(Frame):
 
                 if system_type == "login_success":
                     if self.un == incoming[1]:  # redundant check
-                        self.message_label.config(text="< %s > Enter Message: " % self.un,
+                        self.message_label.config(text=" <%s> Enter Message: " % self.un,
                                                   fg=self._default_user_colors[self.un]['fg'],
                                                   bg=self._default_user_colors[self.un]['bg'])
 
