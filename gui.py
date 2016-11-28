@@ -275,7 +275,8 @@ class GUI(Frame):
         self.messages.tag_add(name, "1.0", "1.%s" % (len(name)+14))  # additional len for time and <>
 
     def add_user(self, name):
-        self._color_generator.send(name)
+        if not name in self.users.get(0, END):  # this is not needed, but leave here in case
+            self._color_generator.send(name)
 
 def main():
     up_queue = Queue()  # GUI TO CLIENT COMMUNICATION

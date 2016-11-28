@@ -190,7 +190,6 @@ def inputOutputThread(lSocket):
                     #clientSock.shutdown(socket.SHUT_RDWR)
                     #clientSock.close()
                     # update user list
-                    
                 else:
                     print "[Debug] inputOutputThread:  non-chat returned from myRecv. cmd " + str(cmd) + " buf: " + buf
                 

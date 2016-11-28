@@ -5,9 +5,10 @@ from Crypto.Cipher import ARC4
 
 
 key = '82aaee3b0f5c1e12' 
+DEBUG = 1
 
 #Constants
-HEADER_SIZE = 40 
+HEADER_SIZE = 40
 NET_BUF_SIZE = 1024
 ERROR = -1
 USERNAME = 1
@@ -22,6 +23,7 @@ SELECT_TIMEOUT = 2
 
 #inBox = Queue.Queue(0)
 clientSock = ''
+temp_user_list = []  # David this is just a temporary way to add new users to the chat
 
 class StoppableQueueThread(threading.Thread):
     """Thread class with a stop() method. The thread itself has to check
@@ -43,20 +45,26 @@ class threadReadFromServer(StoppableQueueThread):
 
     def run(self):
         global clientSock
+        global temp_user_list
 
         inputList = [clientSock]
         while not self._stop.isSet():
             self._lock.acquire()
             try:
                 readable, writeable, exceptional = select.select(inputList, [], inputList, SELECT_TIMEOUT)
-                if readable:
+                if readable:  # no need to iterate since we can assume there is just one connection
                     cmd, cmdId, recBuf = myRecv(clientSock, key)
                     if cmd == CHAT:
                         user, message = recBuf[1:].split(">")
                         user = user.strip()
                         message = message.strip()
-                        print user, message
-                        self.down_queue.put(["message", user, message])
+                        if DEBUG:
+                            print "[Debug] User: %s - Wrote: %s" % (user, message)
+                        self.down_queue.put(["message", user, message])  # add a new message to GUI
+                        if user not in temp_user_list:
+                            self.down_queue.put(["user", user, 1])  # instruct GUI to add a new user
+                            temp_user_list.append(user)
+
             finally:
                 self._lock.release()
 
@@ -267,18 +275,18 @@ def main(up_queue, down_queue):
             # if we authenticated, awesome otherwise die
             if(recBuf == 'OK'):
                 down_queue.put(["message", "EChatr", "Successfully logged in!"])
+                # client is now authenticated
+                # ui.userlist.append(username) #TODO
+                down_queue.put(["user", username, 1])  # 1 for add -1 for remove
+                down_queue.put(["system", username, "login_success"])  # 1 for add -1 for remove
+                temp_user_list.append(username)
+                # ui.redraw_userlist()
                 break
             else:
                 down_queue.put(["message", "EChatr", "Login failed. Try again!"])
                 clientSock.close()  # socket file descriptor appears to get destroyed
                 down_queue.put(["message", "EChatr", "Reconnecting to server..."])
                 clientSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # so make new one
-
-        # client is now authenticated
-        # ui.userlist.append(username) #TODO
-        down_queue.put(["user", username, 1])  # 1 for add -1 for remove
-        down_queue.put(["system", username, "login_success"])  # 1 for add -1 for remove
-        # ui.redraw_userlist()
 
         # start thread to send and recv messages
         serverReader = threadReadFromServer(down_queue)
