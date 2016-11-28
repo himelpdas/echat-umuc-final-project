@@ -13,7 +13,7 @@ from multiprocessing import Process, Queue
 from Queue import Empty
 import random
 import datetime
-import psutil
+# import psutil
 
 DEBUG = 0
 
@@ -45,11 +45,11 @@ class LoginDialog(tkSimpleDialog.Dialog):
         return self.e1  # initial focus
 
     def validate(self):
-        '''validate the data
+        """validate the data
 
         This method is called automatically to validate the data before the
         dialog is destroyed. By default, it always validates OK.
-        '''
+        """
         self.un = self.e1.get()
         self.pw = self.e2.get()
         if not (self.un and self.pw):
@@ -64,14 +64,13 @@ class LoginDialog(tkSimpleDialog.Dialog):
         return 1  # override
 
     def apply(self):
-        if self.parent.client_process_is_alive():
-            self.parent.up_queue.put("/quit")
+        if not self.parent.client_process_is_quitting and self.parent.client_process_is_alive():
+            self.parent.up_queue.put((None, "/quit"))
 
         self.parent.un = self.un
         self.parent.pw = self.pw
 
-        self.parent.re_login(self.parent.client_pid)
-
+        self.parent.re_login()
 
 
 class GUI(Frame):
@@ -85,7 +84,7 @@ class GUI(Frame):
         self.parent = parent
         self.up_queue = Queue()  # GUI TO CLIENT COMMUNICATION
         self.down_queue = Queue()  # CLIENT TO GUI COMMUNICATION
-        self.client_process = self.client_pid = None
+        self.client_process = self.client_pid = self.client_process_is_quitting = None
         self.title = title
 
         # helper variables
@@ -106,6 +105,7 @@ class GUI(Frame):
         self.users = None
         self.messages = None
         self.message_entry = None
+        self.message_label = None
 
         # init widgets
         self.init_menu()
@@ -125,33 +125,32 @@ class GUI(Frame):
     def client_process_is_alive(self):
         return getattr(self.client_process, 'is_alive', lambda: None)()
 
-    @staticmethod
-    def pid_is_alive(pid):
-        return psutil.pid_exists(pid)
-
     def start_client_process(self):
         self.client_process = Process(target=client, args=(self.up_queue, self.down_queue))
         self.client_process.start()
         self.client_pid = self.client_process.pid
+        self.client_process_is_quitting = False
 
     def on_close(self):
-        self.up_queue.put("/quit")  # kill dummy server
+        self.up_queue.put((None, "/quit"))  # kill dummy server
         self.parent.destroy()
 
-    def reset_listbox(self):
+    def reset_styling(self):
         self._listbox_previous_select = None
         self._listbox_current_select = None
         self.users.delete(0, END)  # reset the list box
+        self.message_label.config(text="< guest > Login First! ",
+                                  fg="black",
+                                  bg="white")
 
-    def re_login(self, kill):  #
-        if not psutil.pid_exists(kill):  # http://bit.ly/2fVCXDc
-            self.reset_listbox()
+    def re_login(self):  #
+        if not self.client_process_is_alive():  # http://bit.ly/2fVCXDc
+            self.reset_styling()
             self.this_user = None
             self.start_client_process()
-            self.up_queue.put(self.un)
-            self.up_queue.put(self.pw)
+            self.up_queue.put((self.un, self.pw))
         else:
-            self.parent.after(100, lambda: self.re_login(kill))
+            self.parent.after(100, self.re_login)
 
     def task_loop(self):
 
@@ -177,12 +176,22 @@ class GUI(Frame):
 
                 if system_type == "login_success":
                     self.this_user = incoming[1]
+                    self.message_label.config(text="< %s > Enter Message: " % self.this_user,
+                                              fg=self._default_user_colors[self.this_user]['fg'],
+                                              bg=self._default_user_colors[self.this_user]['bg'])
 
-                if system_type == "shutdown":
+                if system_type == "app_shutdown":
                     self.parent.after(incoming[1], self.on_close)
 
                 if system_type == "client_restart":
-                    self.parent.after(incoming[1], lambda: self.re_login(self.client_pid))
+                    self.client_process_is_quitting = True
+                    self.parent.after(incoming[1], self.re_login)
+
+                if system_type == "disable_widget":
+                    getattr(self, incoming[1]).config(state=DISABLED)
+
+                if system_type == "enable_widget":
+                    getattr(self, incoming[1]).config(state=NORMAL)
 
             elif incoming_type == "user":
                 add = incoming[2]
@@ -235,16 +244,20 @@ class GUI(Frame):
         _bg = self._default_user_colors['EChatr']['bg']
         self.messages.tag_config('EChatr', background=_bg, foreground=_fg)  # color EChatr occurrences in the messages
 
-        _last_bg, _last_fg = [], []
         while True:
             name = yield
             self.users.insert(0, name)  # opposite of END
-            _fg = random.choice(list(self.colors.difference(_last_fg)))
-            _last_fg = [_fg]
-            _bg = random.choice(list(self.colors.difference(_last_fg+_last_bg)))  # ensure different colors each row
-            _last_bg = [_bg]
-            self.users.itemconfig(0, {'fg': _fg, 'bg': _bg})  # color the name on the user list
-            self._default_user_colors[name] = {'fg': _fg, 'bg': _bg}
+            while 1:
+                _fg = (random.randint(0,255), random.randint(0,255), random.randint(0,255))
+                _bg = (random.randint(0,255), random.randint(0,255), random.randint(0,255))
+                if GUI.color_dist(_fg, _bg) > 0.4:
+                    _fg = "#%02x%02x%02x" % _fg
+                    _bg = "#%02x%02x%02x" % _bg
+                    my_colors = {'fg': _fg, 'bg': _bg}
+                    if my_colors not in self._default_user_colors.keys():  # make sure no dupes
+                        break
+            self.users.itemconfig(0, my_colors)  # color the name on the user list
+            self._default_user_colors[name] = my_colors
             self.messages.tag_config(name, background=_bg, foreground=_fg)  # color name occurrences in the messages
 
     def init_ui(self):
@@ -275,10 +288,12 @@ class GUI(Frame):
         self.panel.add(self.users)
         self.panel.add(self.messages)
 
-        message_label = Label(self, text="Enter Message:")
-        self.message_entry = Entry(self, bg="gray99")
-        message_label.pack(side=LEFT)
+        self.message_label = Label(self)
+        self.message_entry = Entry(self, bg="gray99", state=DISABLED)
+        self.message_label.pack(side=LEFT)
         self.message_entry.pack(side=RIGHT, fill=X, expand=True)  # expand entire x free space
+
+        self.reset_styling()
 
         # bind widgets to callbacks
         self.message_entry.bind("<Return>", self.message_entry_callback)
@@ -304,12 +319,8 @@ class GUI(Frame):
 
     def send_message(self, name, message):
         if self.this_user:
-            send = "< " + name + " > " + message
+            send = (name, message)
             self.up_queue.put(send)
-        else:
-            name = "EChatr"
-            message = "Message not sent! Please login first."
-            self.add_message(name, message)
 
     def add_message(self, name, message):
         line = "<%s> %s %s\n\n" % (name, datetime.datetime.now().strftime("%I:%M:%S %p"), message)
@@ -319,6 +330,24 @@ class GUI(Frame):
     def add_user(self, name):
         if not name in self.users.get(0, END):  # this is not needed, but leave here in case
             self._color_generator.send(name)
+
+    @staticmethod
+    def rgb_to_ycc(r, g, b):  # http://bit.ly/1blFUsF
+        y = .299*r + .587*g + .114*b
+        cb = 128 - .168736*r - .331364*g + .5*b
+        cr = 128 + .5*r - .418688*g - .081312*b
+        return y, cb, cr
+
+    @staticmethod
+    def to_ycc(color):
+        """ converts color tuples to floats and then to yuv """
+        return GUI.rgb_to_ycc(*[x/255.0 for x in color])
+
+    @staticmethod
+    def color_dist(c1, c2):
+        """ returns the squared euclidean distance between two color vectors in yuv space """
+        return sum((a-b)**2 for a, b in zip(GUI.to_ycc(c1), GUI.to_ycc(c2)))
+
 
 def main():
 
