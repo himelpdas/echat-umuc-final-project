@@ -225,6 +225,9 @@ def doShutdown(tSock, wThread):
 # def main(stdscr):
 def main(up_queue, down_queue):
 
+    down_queue.put(["message", "EChatr", "Started EChatr Client Process (ID %s)" % os.getpid()])
+    down_queue.put(["system", os.getpid(), "client_pid"])
+
     cmd = ''
     host = '127.0.0.1'
     port = 8080
@@ -241,52 +244,47 @@ def main(up_queue, down_queue):
 
         # authenticates users to remote service
 
-        username = None
-        while True:
-            # connect to server
-            clientSock.connect((host, port))
-            # ui.chatbuffer_add("Connected to: " + host)
-            down_queue.put(["message", "EChatr", "Connected to: " + host])
-            down_queue.put(["message", "EChatr", "Please login now"])
-            # username = ui.wait_input("Username: ")  # before ui.py removal
-            # username = raw_input("Username: ")  # after ui.py removal
-            username = up_queue.get()  # after gui.py integration  # block here to wait for username from GUI
-            if "/quit" == username:
-                down_queue.put(["message", "EChatr", "Quitting!"])
-                clientSock.close()
-                sys.exit(1)
+        # connect to server
+        clientSock.connect((host, port))
+        # ui.chatbuffer_add("Connected to: " + host)
+        down_queue.put(["message", "EChatr", "Connected to: " + host])
+        # username = ui.wait_input("Username: ")  # before ui.py removal
+        # username = raw_input("Username: ")  # after ui.py removal
+        username = up_queue.get()  # after gui.py integration  # block here to wait for username from GUI
+        password = up_queue.get()  # after gui.py integration  # block here to wait for password from GUI
+        if "/quit" in [username, password]:
+            down_queue.put(["message", "EChatr", "Quitting!"])
+            clientSock.close()
+            sys.exit(-1)
 
-            # send username
-            header = "%4s%4s%16s%16s" % (USERNAME, 0,  binascii.crc32(username),  len(username))
-            mySend(header, username, clientSock, key)
+        # send username
+        header = "%4s%4s%16s%16s" % (USERNAME, 0,  binascii.crc32(username),  len(username))
+        mySend(header, username, clientSock, key)
+        cmd, cmdId, recBuf = myRecv(clientSock, key)
+
+        # no results from the server to indicate weather it's a valid username by design
+        if(cmd == USERNAME):
+
+            # password = ui.wait_input("Password: ")  # before ui.py removal
+            # password = raw_input("Password: ")  # after ui.py removal
+            header = "%4s%4s%16s%16s" % (PASSWD, 0,  binascii.crc32(password),  len(password))
+            mySend(header, password, clientSock, key)
+            #get response back from server
             cmd, cmdId, recBuf = myRecv(clientSock, key)
 
-            # no results from the server to indicate weather it's a valid username by design
-            if(cmd == USERNAME):
-
-                # password = ui.wait_input("Password: ")  # before ui.py removal
-                # password = raw_input("Password: ")  # after ui.py removal
-                password = up_queue.get()  # after gui.py integration  # block here to wait for password from GUI
-                header = "%4s%4s%16s%16s" % (PASSWD, 0,  binascii.crc32(password),  len(password))
-                mySend(header, password, clientSock, key)
-                #get response back from server
-                cmd, cmdId, recBuf = myRecv(clientSock, key)
-
-            # if we authenticated, awesome otherwise die
-            if(recBuf == 'OK'):
-                down_queue.put(["message", "EChatr", "Successfully logged in!"])
-                # client is now authenticated
-                # ui.userlist.append(username) #TODO
-                down_queue.put(["user", username, 1])  # 1 for add -1 for remove
-                down_queue.put(["system", username, "login_success"])  # 1 for add -1 for remove
-                temp_user_list.append(username)
-                # ui.redraw_userlist()
-                break
-            else:
-                down_queue.put(["message", "EChatr", "Login failed. Try again!"])
-                clientSock.close()  # socket file descriptor appears to get destroyed
-                down_queue.put(["message", "EChatr", "Reconnecting to server..."])
-                clientSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # so make new one
+        # if we authenticated, awesome otherwise die
+        if(recBuf == 'OK'):
+            down_queue.put(["message", "EChatr", "Successfully logged in!"])
+            # client is now authenticated
+            # ui.userlist.append(username) #TODO
+            down_queue.put(["user", username, 1])  # 1 for add -1 for remove
+            down_queue.put(["system", username, "login_success"])  # 1 for add -1 for remove
+            temp_user_list.append(username)
+            # ui.redraw_userlist()
+        else:
+            clientSock.close()  # socket file descriptor appears to get destroyed
+            down_queue.put(["message", "EChatr", "Authentication Error: Login failed!"])
+            gui_client_quit_countdown(5, up_queue, down_queue, lambda: sys.exit(1), None, post="Try logging in again!")
 
         # start thread to send and recv messages
         serverReader = threadReadFromServer(down_queue)
@@ -296,13 +294,13 @@ def main(up_queue, down_queue):
         while True:
         
             userInput = up_queue.get()
-            if(userInput == "/quit"):
-                print "[*] Client Terminating"
+            if userInput[-5:] == "/quit":
                 header = "%4s%4s%16s%16s" % (EXIT, 0,  binascii.crc32('aaaa'),  len('aaaa'))
                 mySend(header, 'aaaa', clientSock, key)
-                doShutdown(clientSock, serverReader)
+                gui_client_quit_countdown(3, up_queue, down_queue, lambda: doShutdown(clientSock, serverReader),
+                                          "shutdown", pre="The EChatr Application will shutdown.")  # shutdown app
 
-            elif(userInput == "/help"):
+            elif userInput[-5:] == "/help":
                 print "--- Supported Commands ---"
                 print " /help - this menu"
                 print " /quit - quits "
@@ -311,14 +309,27 @@ def main(up_queue, down_queue):
                 header = "%4s%4s%16s%16s" % (CHAT, 0,  binascii.crc32(userInput),  len(userInput))
                 mySend(header, userInput, clientSock, key)  # Fixed - David it looks like the server is not getting this
            
-    except (socket.gaierror, socket.error, KeyboardInterrupt), e:
-        down_queue.put(["message", "EChatr", "EChatr Client Process Fatal Error: %s" % e])
-        gui_quit_countdown(10, up_queue, down_queue, lambda: sys.exit(1))
+    except (socket.gaierror, socket.error), e:
+        down_queue.put(["message", "EChatr", "Connection Error: %s." % e])
+        gui_client_quit_countdown(5, up_queue, down_queue, lambda: sys.exit(1), "client_restart",
+                                  post="Reconnecting...")
+
+    except Exception, e:
+        down_queue.put(["message", "EChatr", "Fatal Error: %s." % e])
+        gui_client_quit_countdown(10, up_queue, down_queue, lambda: sys.exit(4), "shutdown",
+                                  pre="The EChatr Application will shutdown.")  # shutdown application
 
 
-def gui_quit_countdown(seconds_to_kill, up_queue, down_queue, quit_callback):
-    down_queue.put(["system", seconds_to_kill * 1000, "shutdown"])  # 1 for add -1 for remove
-    down_queue.put(["message", "EChatr", "Shutting down in %s seconds..." % seconds_to_kill])
+def gui_client_quit_countdown(seconds_to_kill, up_queue, down_queue, quit_callback, command, pre=None, post=None):
+    if command:
+        down_queue.put(["system", seconds_to_kill * 1000, command])
+
+    down_queue.put(["message", "EChatr",
+                    "Stopping EChatr Client Process (ID %s) in %s seconds..." % (os.getpid(), seconds_to_kill)])
+
+    if pre:
+        down_queue.put(["message", "EChatr", pre])
+
     while seconds_to_kill != 0:
         try:  # if GUI quits before countdown, then quit this process immediately
             if "/quit" == up_queue.get_nowait():
@@ -329,6 +340,9 @@ def gui_quit_countdown(seconds_to_kill, up_queue, down_queue, quit_callback):
         seconds_to_kill -= 1
         if seconds_to_kill % 2 == 0:
             down_queue.put(["message", "EChatr", "%s... %s..." % (seconds_to_kill + 1, seconds_to_kill)])
+
+    if post:
+        down_queue.put(["message", "EChatr", post])
 
     quit_callback()
 
