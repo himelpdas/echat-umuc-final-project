@@ -46,11 +46,7 @@ class LoginDialog(tkSimpleDialog.Dialog):
 
         self.er = Label(master, fg="red")
 
-        try:
-            login = json.loads(keyring.get_password("echatr", "login"))
-        except (ValueError, TypeError):  # something went wrong
-            keyring.set_password("echatr", "login", json.dumps({}))
-            login = {}
+        login = LoginDialog.get_login()
 
         if login:
             self.e1.set(login["username"])
@@ -58,6 +54,15 @@ class LoginDialog(tkSimpleDialog.Dialog):
             self.cb.set(login["remember"])
 
         return e1  # initial focus
+
+    @staticmethod
+    def get_login():
+        try:
+            login = json.loads(keyring.get_password("echatr", "login"))
+        except (ValueError, TypeError):  # something went wrong
+            keyring.set_password("echatr", "login", json.dumps({}))
+            login = {}
+        return login
 
     def validate(self):
         """validate the data
@@ -118,9 +123,9 @@ class GUI(Frame):
         self._killing_process = False
 
         # current user
-        self.un = None
-        self.pw = None
-        self.this_user = None
+        login = LoginDialog.get_login()
+        self.un = login.get("username", None)
+        self.pw = login.get("password", None)
 
         # declare widgets
         self.panel = None
@@ -143,6 +148,9 @@ class GUI(Frame):
         # task loop
         parent.protocol("WM_DELETE_WINDOW", self.on_close)  # http://bit.ly/2fPXjRS
         self.task_loop()
+
+        if self.un and self.pw:  # safer than self.login
+            self.re_login()
 
     def client_process_is_alive(self):
         return getattr(self.client_process, 'is_alive', lambda: None)()
@@ -168,7 +176,6 @@ class GUI(Frame):
     def re_login(self):  #
         if not self.client_process_is_alive():  # http://bit.ly/2fVCXDc
             self.reset_styling()
-            self.this_user = None
             self.start_client_process()
             self.up_queue.put((self.un, self.pw))
         else:
@@ -197,10 +204,10 @@ class GUI(Frame):
                 system_type = incoming[2]
 
                 if system_type == "login_success":
-                    self.this_user = incoming[1]
-                    self.message_label.config(text="< %s > Enter Message: " % self.this_user,
-                                              fg=self._default_user_colors[self.this_user]['fg'],
-                                              bg=self._default_user_colors[self.this_user]['bg'])
+                    if self.un == incoming[1]:  # redundant check
+                        self.message_label.config(text="< %s > Enter Message: " % self.un,
+                                                  fg=self._default_user_colors[self.un]['fg'],
+                                                  bg=self._default_user_colors[self.un]['bg'])
 
                 if system_type == "app_shutdown":
                     self.parent.after(incoming[1], self.on_close)
@@ -336,13 +343,12 @@ class GUI(Frame):
     def message_entry_callback(self, evt):  # event object http://bit.ly/2fUt88N
         new = self.message_entry.get()
         if new:
-            self.send_message(self.this_user, new)
+            self.send_message(self.un, new)
             self.message_entry.delete(0, END)
 
     def send_message(self, name, message):
-        if self.this_user:
-            send = (name, message)
-            self.up_queue.put(send)
+        send = (name, message)
+        self.up_queue.put(send)
 
     def add_message(self, name, message):
         line = "<%s> %s %s\n\n" % (name, datetime.datetime.now().strftime("%I:%M:%S %p"), message)
