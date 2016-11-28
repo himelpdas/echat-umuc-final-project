@@ -254,7 +254,7 @@ def main(up_queue, down_queue):
             if "/quit" == username:
                 down_queue.put(["message", "EChatr", "Quitting!"])
                 clientSock.close()
-                sys.exit(-1)
+                sys.exit(1)
 
             # send username
             header = "%4s%4s%16s%16s" % (USERNAME, 0,  binascii.crc32(username),  len(username))
