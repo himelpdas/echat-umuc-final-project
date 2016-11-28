@@ -300,7 +300,7 @@ class GUI(Frame):
             while 1:
                 _fg = (random.randint(0,255), random.randint(0,255), random.randint(0,255))
                 _bg = (random.randint(0,255), random.randint(0,255), random.randint(0,255))
-                if GUI.color_dist(_fg, _bg) > 0.444:
+                if GUI.color_dist(_fg, _bg) > 0.456:
                     _fg = "#%02x%02x%02x" % _fg
                     _bg = "#%02x%02x%02x" % _bg
                     my_colors = {'fg': _fg, 'bg': _bg}
