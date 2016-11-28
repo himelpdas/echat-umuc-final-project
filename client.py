@@ -311,7 +311,7 @@ def main(up_queue, down_queue):
            
     except (socket.gaierror, socket.error), e:
         down_queue.put(["message", "EChatr", "Connection Error: %s." % e])
-        gui_client_quit_countdown(5, up_queue, down_queue, lambda: sys.exit(1), "client_restart",
+        gui_client_quit_countdown(3, up_queue, down_queue, lambda: sys.exit(1), "client_restart",
                                   post="Reconnecting...")
 
     except Exception, e:
