@@ -330,7 +330,7 @@ class GUI(Frame):
         scrollbar.config(command=self.messages.yview)  # when scrollbar change, change yview of text widget
         self.messages.bind("<Key>", lambda e: "break")  # make readonly  http://bit.ly/2erqllU  http://bit.ly/2ersn5y
 
-        self.users = Listbox(self.panel, bg="gray12", selectforeground="white",
+        self.users = Listbox(self.panel, bg="gray12", selectforeground="yellow",
                              exportselection=False,  # ensure selection even when clicking outside http://bit.ly/2fQb8Qq
                              selectbackground="turquoise")
         self.users.bind("<<ListboxSelect>>", self.listbox_select_callback)  # http://bit.ly/2erzieI
@@ -359,7 +359,7 @@ class GUI(Frame):
                                      underline=False,
                                      background=previous_colors["bg"], foreground=previous_colors["fg"])
         self._listbox_current_select = self.users.get(ANCHOR)  # ANCHOR not ACTIVE http://bit.ly/2fQerqY
-        self.messages.tag_config(self._listbox_current_select, background="turquoise", foreground="white")
+        self.messages.tag_config(self._listbox_current_select, background="turquoise", foreground="yellow")
         self._listbox_previous_select = self._listbox_current_select
 
     def message_entry_callback(self, evt):  # event object http://bit.ly/2fUt88N
