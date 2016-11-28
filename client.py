@@ -314,9 +314,8 @@ def main(up_queue, down_queue):
             if seconds_to_kill % 2 == 0:
                 down_queue.put(["message", "EChatr", "%s... %s..." % (seconds_to_kill + 1 , seconds_to_kill)])
         sys.exit(1)
-        
-      
+
 
 # wrapper(main)
 if __name__ == "__main__":
-    main(None)
+    pass
