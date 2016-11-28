@@ -304,14 +304,15 @@ def main(up_queue, down_queue):
                 mySend(header, userInput, clientSock, key)  # fixme - David it looks like the server is not getting this
            
     except (socket.gaierror, socket.error, KeyboardInterrupt), e:
-        down_queue.put(["message", "EChatr", "Fatal Error: %s" % e])
-        seconds_to_kill = 7
+        down_queue.put(["message", "EChatr", "EChatr Client Process Fatal Error: %s" % e])
+        seconds_to_kill = 10
         down_queue.put(["system", seconds_to_kill * 1000, "shutdown"])  # 1 for add -1 for remove
         down_queue.put(["message", "EChatr", "Shutting down in %s seconds..." % seconds_to_kill])
         while seconds_to_kill != 0:
             time.sleep(1)
             seconds_to_kill -= 1
-            down_queue.put(["message", "EChatr", "%s..." % seconds_to_kill])
+            if seconds_to_kill % 2 == 0:
+                down_queue.put(["message", "EChatr", "%s... %s..." % (seconds_to_kill + 1 , seconds_to_kill)])
         sys.exit(1)
         
       
