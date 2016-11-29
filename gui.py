@@ -230,7 +230,8 @@ class GUI(Frame):
     def task_loop(self):
 
         if self._listbox_current_select:
-            _fg = "yellow" if self._blink % 4 else "purple"
+            _fgs = self._default_user_colors["__select__"]
+            _fg = _fgs["fg0"] if self._blink % 4 else _fgs["fg1"]
             self.messages.tag_config(self._listbox_current_select, underline=not self._blink % 2, foreground=_fg)
             self._blink += 1
             if self._blink >= 20:
@@ -241,7 +242,6 @@ class GUI(Frame):
                 self.users.selection_clear(0, END)
                 self._listbox_previous_select = self._listbox_current_select = None
                 self._blink = 0
-
 
         try:
             incoming = self.down_queue.get_nowait()
@@ -352,26 +352,41 @@ class GUI(Frame):
         self.parent.config(menu=menu_bar)
 
     def colorize_names(self):
-        # colorize default system Echatr log
-        _fg = self._default_user_colors['EChatr']['fg']
-        _bg = self._default_user_colors['EChatr']['bg']
-        self.messages.tag_config('EChatr', background=_bg, foreground=_fg)  # color EChatr occurrences in the messages
+
+        def _high_contrast(first=None, gradient=0.678):
+            _my_colors = None
+            _fg_rgb = None
+            _bg_rgb = None
+            while 1:
+                _fg_rgb = first or (random.randint(0,255), random.randint(0,255), random.randint(0,255))
+                _bg_rgb = (random.randint(0,255), random.randint(0,255), random.randint(0,255))
+                if GUI.color_dist(_fg_rgb, _bg_rgb) > gradient:
+                    _fg = "#%02x%02x%02x" % _fg_rgb
+                    _bg = "#%02x%02x%02x" % _bg_rgb
+                    _my_colors = {'fg': _fg, 'bg': _bg}
+                    if _my_colors not in self._default_user_colors.keys():  # make sure no dupes
+                        break
+            return _my_colors, (_fg_rgb, _bg_rgb)
+
+        my_colors = _high_contrast(gradient=0.678)[0]
+        fg, bg = my_colors["fg"], my_colors["bg"]
+        self._default_user_colors["EChatr"] = my_colors
+        self.messages.tag_config('EChatr', background=bg, foreground=fg)  # color EChatr occurrences in the messages
+
+        my_colors = _high_contrast()
+        my_colors2 = _high_contrast(my_colors[1][0])
+        self._default_user_colors["__select__"] = {'fg0': my_colors[0]["fg"],
+                                                   'bg': my_colors[0]["bg"],
+                                                   'fg1': my_colors2[0]["bg"]}
 
         while True:
             name = yield
             self.users.insert(0, name)  # opposite of END
-            while 1:
-                _fg = (random.randint(0,255), random.randint(0,255), random.randint(0,255))
-                _bg = (random.randint(0,255), random.randint(0,255), random.randint(0,255))
-                if GUI.color_dist(_fg, _bg) > 0.456:
-                    _fg = "#%02x%02x%02x" % _fg
-                    _bg = "#%02x%02x%02x" % _bg
-                    my_colors = {'fg': _fg, 'bg': _bg}
-                    if my_colors not in self._default_user_colors.keys():  # make sure no dupes
-                        break
+            my_colors = _high_contrast(gradient=0.456)[0]
+            fg, bg = my_colors["fg"], my_colors["bg"]
             self.users.itemconfig(0, my_colors)  # color the name on the user list
             self._default_user_colors[name] = my_colors
-            self.messages.tag_config(name, background=_bg, foreground=_fg)  # color name occurrences in the messages
+            self.messages.tag_config(name, background=bg, foreground=fg)  # color name occurrences in the messages
 
     def init_ui(self):
 
@@ -392,11 +407,12 @@ class GUI(Frame):
         scrollbar.config(command=self.messages.yview)  # when scrollbar change, change yview of text widget
         self.messages.bind("<Key>", lambda e: "break")  # make readonly  http://bit.ly/2erqllU  http://bit.ly/2ersn5y
 
-        self.users = Listbox(self.panel, bg="gray12", selectforeground="yellow",
-                             exportselection=False,  # ensure selection even when clicking outside http://bit.ly/2fQb8Qq
-                             selectbackground="turquoise")
-        self.users.bind("<<ListboxSelect>>", self.listbox_select_callback)  # http://bit.ly/2erzieI
         self._color_generator.next()  # also .send(None) works
+
+        self.users = Listbox(self.panel, bg="gray12", selectforeground=self._default_user_colors["__select__"]["fg0"],
+                             exportselection=False,  # ensure selection even when clicking outside http://bit.ly/2fQb8Qq
+                             selectbackground=self._default_user_colors["__select__"]["bg"])
+        self.users.bind("<<ListboxSelect>>", self.listbox_select_callback)  # http://bit.ly/2erzieI
 
         self.panel.add(self.users)
         self.panel.add(self.messages)
@@ -422,7 +438,9 @@ class GUI(Frame):
                                      underline=False,
                                      background=previous_colors["bg"], foreground=previous_colors["fg"])
         self._listbox_current_select = self.users.get(ANCHOR)  # ANCHOR not ACTIVE http://bit.ly/2fQerqY
-        self.messages.tag_config(self._listbox_current_select, background="turquoise", foreground="yellow")
+        self.messages.tag_config(self._listbox_current_select,
+                                 background=self._default_user_colors["__select__"]["bg"],
+                                 foreground=self._default_user_colors["__select__"]["fg0"])
         self._listbox_previous_select = self._listbox_current_select
 
     def message_entry_callback(self, evt):  # event object http://bit.ly/2fUt88N
