@@ -229,8 +229,6 @@ def main(up_queue, down_queue):
     down_queue.put(["system", os.getpid(), "client_pid"])
 
     cmd = ''
-    host = '127.0.0.1'
-    port = 8080
     bufLen = 0
     outBox = Queue.Queue(0)
     global clientSock
@@ -243,7 +241,7 @@ def main(up_queue, down_queue):
         # ui = ChatUI(stdscr)
 
         # authenticates users to remote service
-
+        host, port = up_queue.get()
         # connect to server
         clientSock.connect((host, port))
         # ui.chatbuffer_add("Connected to: " + host)

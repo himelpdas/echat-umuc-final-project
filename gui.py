@@ -15,6 +15,7 @@ import random
 import datetime
 import keyring
 import json
+import socket
 # import psutil
 
 DEBUG = 0
@@ -25,43 +26,56 @@ class LoginDialog(tkSimpleDialog.Dialog):
     def __init__(self, parent, up_queue, down_queue):
         self.up_queue = up_queue
         self.down_queue = down_queue
-        self.e1 = self.e2 = self.cb = self.er = self.un = self.pw = None  # entry 1, 2, checkbox, err label, user, pass
+        # entry 1, 2, checkbox, err label, user, pass
+        self.e1 = self.e2 = self.e3 = self.e4 = self.cb = self.er = self.un = \
+            self.pw = self.ip = self.pt = self.dm = None
         tkSimpleDialog.Dialog.__init__(self, parent, title="Login now...")
 
     def body(self, master):  # called by the init tkSimpleDialog.Dialog.__init__
 
         Label(master, text="Username:").grid(row=0)
         Label(master, text="Password:").grid(row=1)
+        Label(master, text="IP/Domain:").grid(row=2)
+        Label(master, text="Port #:").grid(row=3)
 
-        self.e1 = StringVar()
-        self.e2 = StringVar()
+        self.e1 = StringVar()  # username
+        self.e2 = StringVar()  # password
+        self.e3 = StringVar()  # ip
+        self.e4 = StringVar()  # port
+        self.cb = IntVar()  # remember
         e1 = Entry(master, textvariable=self.e1)
         e2 = Entry(master, show="*", textvariable=self.e2)
+        e3 = Entry(master, textvariable=self.e3)
+        e4 = Entry(master, textvariable=self.e4)
+        cb = Checkbutton(master, text="Remember me?", variable=self.cb)
+        self.er = Label(master, fg="red")
         e1.grid(row=0, column=1)
         e2.grid(row=1, column=1)
-
-        self.cb = IntVar()
-        cb = Checkbutton(master, text="Remember me?", variable=self.cb)
-        cb.grid(row=2, columnspan=2, sticky=W)
-
-        self.er = Label(master, fg="red")
+        e3.grid(row=2, column=1)
+        e4.grid(row=3, column=1)
+        cb.grid(row=4, columnspan=2, sticky=W)
 
         login = LoginDialog.get_login()
-
-        if login:
+        if LoginDialog.remember_me(login):
             self.e1.set(login["username"])
             self.e2.set(login["password"])
+            self.e3.set(login["domain"])
+            self.e4.set(login["port"])
             self.cb.set(login["remember"])
 
         return e1  # initial focus
+
+    @staticmethod
+    def remember_me(login):
+        return all(map(lambda k: login.get(k), ["username", "password", "ip", "domain", "port", "remember"]))
 
     @staticmethod
     def get_login():
         try:
             login = json.loads(keyring.get_password("echatr", "login"))
         except (ValueError, TypeError):  # something went wrong
-            keyring.set_password("echatr", "login", json.dumps({}))
-            login = {}
+            login = {'remember': 0}
+            keyring.set_password("echatr", "login", json.dumps(login))
         return login
 
     def validate(self):
@@ -72,16 +86,38 @@ class LoginDialog(tkSimpleDialog.Dialog):
         """
         self.un = self.e1.get()
         self.pw = self.e2.get()
-        if not (self.un and self.pw):
-            empty = None
-            if not self.un:
-                empty = "Username"
-            elif not self.pw:
-                empty = "Password"
-            self.er.grid(row=3, column=1)
-            self.er.config(text="%s is blank!" % empty)
+        self.dm = self.e3.get()
+        self.pt = self.e4.get()
+        empty = None
+        if not self.un:
+            empty = "Username"
+        elif not self.pw:
+            empty = "Password"
+        elif not self.dm:
+            empty = "IP/Domain"
+        elif not self.pt:
+            empty = "Port #"
+
+        error = None
+        try:
+            self.ip = socket.gethostbyname(self.dm)  # converts domain name and IP as well
+            self.pt = int(self.pt)
+            if not self.pt >= 0 and not self.pt <= 65535:
+                raise TypeError
+        except socket.gaierror:
+            error = "Could not resolve address or IP"
+        except ValueError:
+            error = "Port # must be integer 0 to 65535"
+
+        if empty or error:
+            self.er.grid(row=5, column=1)
+            if empty:
+                self.er.config(text="%s is blank!" % empty)
+            elif error:
+                self.er.config(text="%s!" % error)
             return 0
-        return 1  # override
+        else:
+            return 1  # override
 
     def apply(self):
         if not self.parent.client_process_is_quitting and self.parent.client_process_is_alive():
@@ -89,13 +125,16 @@ class LoginDialog(tkSimpleDialog.Dialog):
 
         self.parent.un = self.un
         self.parent.pw = self.pw
+        self.parent.ip = self.ip
+        self.parent.pt = self.pt
         remember = self.cb.get()
 
         if remember:
             keyring.set_password("echatr", "login",
-                                 json.dumps({"username": self.un, "password": self.pw, "remember": 1}))
+                                 json.dumps({"username": self.un, "password": self.pw, "remember": 1, "ip": self.ip,
+                                             "domain": self.dm, "port": self.pt}))
         else:
-            keyring.set_password("echatr", "login", json.dumps({}))
+            keyring.set_password("echatr", "login", json.dumps({"remember": 0}))
 
         self.parent.re_login()
 
@@ -122,11 +161,6 @@ class GUI(Frame):
         self._blink = False
         self._killing_process = False
 
-        # current user
-        login = LoginDialog.get_login()
-        self.un = login.get("username", None)
-        self.pw = login.get("password", None)
-
         # declare widgets
         self.panel = None
         self.users = None
@@ -139,8 +173,6 @@ class GUI(Frame):
         self.init_menu()
         self.init_ui()
 
-        self.show_help_messages()
-
         # set dimensions
         parent.update()  # force app width and height to update before mainloop  http://bit.ly/2eroHkk
         self.default_x = self.parent.winfo_width()
@@ -150,7 +182,17 @@ class GUI(Frame):
         parent.protocol("WM_DELETE_WINDOW", self.on_close)  # http://bit.ly/2fPXjRS
         self.task_loop()
 
-        if self.un and self.pw:  # safer than self.login
+        # initial messages
+        self.show_help_messages()
+
+        # current user
+        login = LoginDialog.get_login()
+        self.un = login.get("username", None)
+        self.pw = login.get("password", None)
+        self.ip = login.get("ip", None)
+        self.pt = login.get("port", None)
+
+        if LoginDialog.remember_me(login):  # safer than self.login
             self.re_login()
 
     def client_process_is_alive(self):
@@ -180,6 +222,7 @@ class GUI(Frame):
         if not self.client_process_is_alive():  # http://bit.ly/2fVCXDc
             self.reset_styling()
             self.start_client_process()
+            self.up_queue.put((self.ip, self.pt))
             self.up_queue.put((self.un, self.pw))
         else:
             self.parent.after(100, self.re_login)
