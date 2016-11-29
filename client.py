@@ -330,6 +330,9 @@ def main(up_queue, down_queue):
 
 
 def gui_client_quit_countdown(seconds_to_kill, up_queue, down_queue, quit_callback, command, pre=None, post=None):
+    # prevent anything from messing up the queue during Echatr Client Process reset
+    down_queue.put(["system", "message_entry", "disable_widget"])
+
     if pre:
         down_queue.put(["message", "EChatr", pre])
 
@@ -355,9 +358,6 @@ def gui_client_quit_countdown(seconds_to_kill, up_queue, down_queue, quit_callba
 
     if post:
         down_queue.put(["message", "EChatr", post])
-
-    # prevent anything from messing up the queue during Echatr Client Process reset
-    down_queue.put(["system", "message_entry", "disable_widget"])
 
     quit_callback()
 

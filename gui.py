@@ -358,8 +358,8 @@ class GUI(Frame):
             _fg_rgb = None
             _bg_rgb = None
             while 1:
-                _fg_rgb = first or (random.randint(0,255), random.randint(0,255), random.randint(0,255))
-                _bg_rgb = (random.randint(0,255), random.randint(0,255), random.randint(0,255))
+                _fg_rgb = first or (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+                _bg_rgb = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
                 if GUI.color_dist(_fg_rgb, _bg_rgb) > gradient:
                     _fg = "#%02x%02x%02x" % _fg_rgb
                     _bg = "#%02x%02x%02x" % _bg_rgb
