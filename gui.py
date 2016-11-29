@@ -234,7 +234,7 @@ class GUI(Frame):
             _fg = _fgs["fg0"] if self._blink % 4 else _fgs["fg1"]
             self.messages.tag_config(self._listbox_current_select, underline=not self._blink % 2, foreground=_fg)
             self._blink += 1
-            if self._blink >= 20:
+            if self._blink >= 22:
                 previous_colors = self._default_user_colors[self._listbox_current_select]
                 self.messages.tag_config(self._listbox_previous_select,
                                          underline=False,
@@ -368,13 +368,13 @@ class GUI(Frame):
                         break
             return _my_colors, (_fg_rgb, _bg_rgb)
 
-        my_colors = _high_contrast(gradient=0.678)[0]
+        my_colors = _high_contrast()[0]
         fg, bg = my_colors["fg"], my_colors["bg"]
         self._default_user_colors["EChatr"] = my_colors
         self.messages.tag_config('EChatr', background=bg, foreground=fg)  # color EChatr occurrences in the messages
 
         my_colors = _high_contrast()
-        my_colors2 = _high_contrast(my_colors[1][0])
+        my_colors2 = _high_contrast(my_colors[1][0], gradient=0.369)
         self._default_user_colors["__select__"] = {'fg0': my_colors[0]["fg"],
                                                    'bg': my_colors[0]["bg"],
                                                    'fg1': my_colors2[0]["bg"]}
