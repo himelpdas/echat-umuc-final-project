@@ -21,7 +21,18 @@ from Crypto.Hash import SHA256
 # secrets database
 
 secrets = {'user': '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
-           'jamie': '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8'}
+           'jamie': '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
+           'jon': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
+           'himel': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
+           'dachelle': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
+           'david': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824'}
+"""
+>>> p = SHA256.new()
+>>> p.update("hello")
+>>> p.hexdigest()
+'2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824'
+>>>
+"""
 
 key = '82aaee3b0f5c1e12' 
 
@@ -37,7 +48,7 @@ EXIT = 4
 USERLIST = 5
 NOT_IMPLEMENTED = -1 
 SELECT_TIMEOUT = 2
-DEBUG = 1
+DEBUG = 0
 
 socketList = []
 
@@ -159,8 +170,11 @@ def myRecv(recvSock, key):
     
 #...
 def inputOutputThread(lSocket):
-    
+    print "[Debug] inputOutputThread: Start"
+
     while True:
+        if not socketList:
+            continue
         buf = ''
         readable, writeable, exceptional = select.select(socketList, [], [], SELECT_TIMEOUT)
         print "[Debug] inputOutputThread: Thread select loop"
@@ -178,7 +192,6 @@ def inputOutputThread(lSocket):
                     #clientSock.shutdown(socket.SHUT_RDWR)
                     #clientSock.close()
                     # update user list
-                    
                 else:
                     print "[Debug] inputOutputThread:  non-chat returned from myRecv. cmd " + str(cmd) + " buf: " + buf
                 
@@ -192,7 +205,7 @@ def main():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind(('127.0.0.1', port))
-    s.listen(5)
+    s.listen(100)
 
     clientReaderWriter = threading.Thread(target=inputOutputThread, args=(s,))    
  
@@ -205,6 +218,7 @@ def main():
             print "[*] Client Connected From: ", clientsock.getpeername() 
             # check pass on new client sock. 
             cmd, cmdId, buf = myRecv(clientsock, key)
+            print buf
             if(cmd == USERNAME):
                 username = buf
                 print '[Debug] username is ' + username
@@ -221,6 +235,13 @@ def main():
             if(secrets.has_key(username)):
                 p = SHA256.new()
                 p.update(password)
+
+                if DEBUG:
+                    print "\n---\n"
+                    print username
+                    print p.hexdigest()
+                    print secrets[username]
+                    print "\n---\n"
                                    
                 if(p.hexdigest() == secrets[username]):
                     print "[!] Password Accepted for " + username
