@@ -142,8 +142,6 @@ class LoginDialog(tkSimpleDialog.Dialog):
 
 class GUI(Frame):
 
-    colors = {'red', 'blue', 'green', 'orange', 'purple', 'yellow', 'teal', 'pink', 'grey'}
-
     def __init__(self, parent, title):
         Frame.__init__(self, parent)
 
@@ -159,7 +157,7 @@ class GUI(Frame):
         self._listbox_current_select = None
         self._default_user_colors = {'EChatr': {'fg': 'black', 'bg': 'white'}}
         self._color_generator = self.colorize_names()
-        self._blink = False
+        self._blink = 0
         self._killing_process = False
 
         # declare widgets
@@ -210,6 +208,7 @@ class GUI(Frame):
         self.parent.destroy()
 
     def reset_styling(self):
+        self._blink = 0  # blink reset counter
         if self._listbox_current_select:
             self.messages.tag_config(self._listbox_current_select, underline=False)
         self._listbox_previous_select = None
@@ -231,8 +230,18 @@ class GUI(Frame):
     def task_loop(self):
 
         if self._listbox_current_select:
-            self._blink = not self._blink
-            self.messages.tag_config(self._listbox_current_select, underline=self._blink)
+            _fg = "yellow" if self._blink % 4 else "purple"
+            self.messages.tag_config(self._listbox_current_select, underline=not self._blink % 2, foreground=_fg)
+            self._blink += 1
+            if self._blink >= 20:
+                previous_colors = self._default_user_colors[self._listbox_current_select]
+                self.messages.tag_config(self._listbox_previous_select,
+                                         underline=False,
+                                         background=previous_colors["bg"], foreground=previous_colors["fg"])
+                self.users.selection_clear(0, END)
+                self._listbox_previous_select = self._listbox_current_select = None
+                self._blink = 0
+
 
         try:
             incoming = self.down_queue.get_nowait()
@@ -406,6 +415,7 @@ class GUI(Frame):
         self.pack(fill=BOTH, expand=True)
 
     def listbox_select_callback(self, evt):
+        self._blink = 0
         if self._listbox_previous_select:
             previous_colors = self._default_user_colors[self._listbox_previous_select]
             self.messages.tag_config(self._listbox_previous_select,

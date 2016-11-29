@@ -27,3 +27,6 @@ def dummy_server_process(queue, kill_queue):  # for experimenting only
                 break
         except Empty:
             pass
+
+
+colors = {'red', 'blue', 'green', 'orange', 'purple', 'yellow', 'teal', 'pink', 'grey'}
