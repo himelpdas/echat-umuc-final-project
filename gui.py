@@ -307,6 +307,7 @@ class GUI(Frame):
         "closing the entire program."
         "\n\n/exit - (from menu: file -> exit) Exit the entire program. This will also quit "
         "the EChatr Client Process.")
+        self.messages.see("1.0")  # scroll to top when entering a message
 
     def init_menu(self):
         menu_bar = Menu(self.parent)
