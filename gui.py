@@ -305,11 +305,11 @@ class GUI(Frame):
         "\n\n/help - (from menu: help -> guide) Show this menu."
         "\n\n/top - Scroll to top."
         "\n\n/bot - Scroll to bottom."
-        "\n\n/quit - Immediately quit server link and EChatr Client Process. Login again to "
+        "\n\n/quit - Immediately quit server link and EChatr Client process. Login again to "
         "restart the EChatr Client process and reconnect to the server. This is useful to pause chatting without "
         "closing the entire program."
         "\n\n/exit - (from menu: file -> exit) Exit the entire program. This will also quit "
-        "the EChatr Client Process.")
+        "the EChatr Client process.")
         self.scroll_to_top()
 
     def scroll_to_top(self):

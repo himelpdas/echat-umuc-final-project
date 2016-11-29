@@ -225,7 +225,7 @@ def doShutdown(tSock, wThread):
 # def main(stdscr):
 def main(up_queue, down_queue):
 
-    down_queue.put(["message", "EChatr", "Started EChatr Client Process (ID %s)" % os.getpid()])
+    down_queue.put(["message", "EChatr", "Started EChatr Client process (ID %s)" % os.getpid()])
     down_queue.put(["system", os.getpid(), "client_pid"])
 
     cmd = ''
@@ -341,7 +341,7 @@ def gui_client_quit_countdown(seconds_to_kill, up_queue, down_queue, quit_callba
         seconds_string = " in %s seconds.." % seconds_to_kill
 
     down_queue.put(["message", "EChatr",
-                    "Quitting EChatr Client Process (ID %s)%s." % (os.getpid(), seconds_string)])
+                    "Quitting EChatr Client process (ID %s)%s." % (os.getpid(), seconds_string)])
 
     while seconds_to_kill != 0:
         try:  # if GUI quits before countdown, then quit this process immediately
