@@ -242,17 +242,18 @@ def main(up_queue, down_queue):
 
         # authenticates users to remote service
         host, port = up_queue.get()
+        # username = ui.wait_input("Username: ")  # before ui.py removal
+        # username = raw_input("Username: ")  # after ui.py removal
+        username, password = up_queue.get()  # after gui.py integration  # block here to wait for username from GUI
+        if "/quit" in [username, password, host, port]:
+            down_queue.put(["message", "EChatr", "Quitting!"])
+            clientSock.close()
+            sys.exit(-1)
+
         # connect to server
         clientSock.connect((host, port))
         # ui.chatbuffer_add("Connected to: " + host)
         down_queue.put(["message", "EChatr", "Connected to %s:%s" % (host, port)])
-        # username = ui.wait_input("Username: ")  # before ui.py removal
-        # username = raw_input("Username: ")  # after ui.py removal
-        username, password = up_queue.get()  # after gui.py integration  # block here to wait for username from GUI
-        if "/quit" in [username, password]:
-            down_queue.put(["message", "EChatr", "Quitting!"])
-            clientSock.close()
-            sys.exit(-1)
 
         # send username
         header = "%4s%4s%16s%16s" % (USERNAME, 0,  binascii.crc32(username),  len(username))
