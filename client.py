@@ -307,6 +307,12 @@ def main(up_queue, down_queue):
             elif message == "/help":
                 down_queue.put(["system", "show_help_messages", "run_method"])
 
+            elif message == "/top":
+                down_queue.put(["system", "scroll_to_top", "run_method"])
+
+            elif message == "/bot":
+                down_queue.put(["system", "scroll_to_bottom", "run_method"])
+
             else:
                 userInput = "< " + name + " > " + message
                 header = "%4s%4s%16s%16s" % (CHAT, 0,  binascii.crc32(userInput),  len(userInput))

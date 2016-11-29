@@ -303,12 +303,20 @@ class GUI(Frame):
         "\n\n[--------Fast Commands--------]"
         "\n\nTo use fast commands you must be logged in. Simply enter these commands in the message box."
         "\n\n/help - (from menu: help -> guide) Show this menu."
+        "\n\n/top - Scroll to top."
+        "\n\n/bot - Scroll to bottom."
         "\n\n/quit - Immediately quit server link and EChatr Client Process. Login again to "
         "restart the EChatr Client process and reconnect to the server. This is useful to pause chatting without "
         "closing the entire program."
         "\n\n/exit - (from menu: file -> exit) Exit the entire program. This will also quit "
         "the EChatr Client Process.")
+        self.scroll_to_top()
+
+    def scroll_to_top(self):
         self.messages.see("1.0")  # scroll to top when entering a message
+
+    def scroll_to_bottom(self):
+        self.messages.see(END)  # scroll to bottom when entering a message
 
     def init_menu(self):
         menu_bar = Menu(self.parent)
@@ -412,7 +420,7 @@ class GUI(Frame):
         if new:
             self.send_message(self.un, new)
             self.message_entry.delete(0, END)
-            self.messages.see("1.0")  # scroll to top when entering a message
+            self.scroll_to_top()  # scroll to top when entering a message
 
     def send_message(self, name, message):
         send = (name, message)
@@ -445,6 +453,7 @@ class GUI(Frame):
         return sum((a-b)**2 for a, b in zip(GUI.to_ycc(c1), GUI.to_ycc(c2)))
 
     def set_embedded_icon(self):  # http://bit.ly/2fYgMfK  # http://bit.ly/2fYlB8E
+        """Fallback b64 icon in case bitmap is not available"""
         icon = '''R0lGODdhFQAVAPMAAAQ2PESapISCBASCBMTCxPxmNCQiJJya/ISChGRmzPz+/PxmzDQyZDQyZDQy
         ZDQyZCwAAAAAFQAVAAAElJDISau9Vh2WMD0gqHHelJwnsXVloqDd2hrMm8pYYiSHYfMMRm53ULlQ
         HGFFx1MZCciUiVOsPmEkKNVp3UBhJ4Ohy1UxerSgJGZMMBbcBACQlVhRiHvaUsXHgywTdycLdxyB
