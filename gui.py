@@ -16,6 +16,7 @@ import datetime
 import keyring
 import json
 import socket
+import os
 # import psutil
 
 DEBUG = 0
@@ -455,8 +456,10 @@ class GUI(Frame):
         """Under Windows, the DEFAULT parameter can be used to set the icon for the widget and any descendants that
         don't have an icon set explicitly. DEFAULT can be the relative path to a .ico file
         (example: root.iconbitmap(default='myicon.ico') ). See Tk documentation for more information."""
-        #self.parent.wm_iconbitmap(default="icon.ico") # only works on windows :(
-        self.parent.wm_iconbitmap("icon.ico")
+        if os.name == "nt":
+            self.parent.wm_iconbitmap(default="icon.ico")  # only works on windows :(  # fixed for all platforms
+        else:
+            self.parent.wm_iconbitmap("icon.ico")
 
 
 def main():
