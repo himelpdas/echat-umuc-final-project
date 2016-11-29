@@ -245,7 +245,7 @@ def main(up_queue, down_queue):
         # connect to server
         clientSock.connect((host, port))
         # ui.chatbuffer_add("Connected to: " + host)
-        down_queue.put(["message", "EChatr", "Connected to: " + host])
+        down_queue.put(["message", "EChatr", "Connected to %s:%s" % (host, port)])
         # username = ui.wait_input("Username: ")  # before ui.py removal
         # username = raw_input("Username: ")  # after ui.py removal
         username, password = up_queue.get()  # after gui.py integration  # block here to wait for username from GUI
