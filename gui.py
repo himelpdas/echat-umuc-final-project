@@ -379,7 +379,7 @@ class GUI(Frame):
         help_menu.add_command(
             label="About",
             command=lambda: tkMessageBox.showinfo("About "+self.title,
-                                                  message=self.title+"\n\n"
+                                                  message=self.title+"\nVersion 1.0 (Alpha)\n\n"
                                                                      "Backend: David Nadwodny\n"
                                                                      "Frontend: Himel Das\n"
                                                                      "Manager: Dachelle Robinson\n"
