@@ -317,7 +317,8 @@ def main(up_queue, down_queue):
                 userInput = "< " + name + " > " + message
                 header = "%4s%4s%16s%16s" % (CHAT, 0,  binascii.crc32(userInput),  len(userInput))
                 mySend(header, userInput, clientSock, key)  # Fixed - David it looks like the server is not getting this
-           
+                down_queue.put(["system", "scroll_to_top", "run_method"])
+
     except (socket.gaierror, socket.error), e:
         down_queue.put(["message", "EChatr", "Connection Error: %s." % e])
         gui_client_quit_countdown(5, up_queue, down_queue, lambda: sys.exit(1), "client_restart",

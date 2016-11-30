@@ -17,6 +17,7 @@ import keyring
 import json
 import socket
 import os
+import time
 # import psutil
 
 DEBUG = 0
@@ -155,7 +156,7 @@ class GUI(Frame):
         # helper variables
         self._listbox_previous_select = None
         self._listbox_current_select = None
-        self._default_user_colors = {'EChatr': {'fg': 'black', 'bg': 'white'}}
+        self._default_user_colors = {}  # i.e. 'EChatr': {'fg': 'black', 'bg': 'white'}
         self._color_generator = self.colorize_names()
         self._blink = 0
         self._killing_process = False
@@ -195,7 +196,7 @@ class GUI(Frame):
             self.re_login()
 
     def client_process_is_alive(self):
-        return getattr(self.client_process, 'is_alive', lambda: None)()
+        return getattr(self.client_process, 'is_alive', lambda: False)()
 
     def start_client_process(self):
         self.client_process = Process(target=client, args=(self.up_queue, self.down_queue))
@@ -215,8 +216,8 @@ class GUI(Frame):
         self._listbox_current_select = None
         self.users.delete(0, END)  # reset the list box
         self.message_label.config(text=" <guest> Login First! ",
-                                  fg="black",
-                                  bg="white")
+                                  fg=self._default_user_colors["EChatr"]["fg"],
+                                  bg=self._default_user_colors["EChatr"]["bg"])
 
     def re_login(self):  #
         if not self.client_process_is_alive():  # http://bit.ly/2fVCXDc
@@ -321,11 +322,48 @@ class GUI(Frame):
         "the EChatr Client process.")
         self.scroll_to_top()
 
+    def get_messages_line(self, pos):
+        return int(self.messages.index(pos).split(".")[0])
+
+    @staticmethod
+    def _log_factor():
+        f = 0
+        while 1:
+            yield int(1 + 2.0 ** (f - 20))
+            f += 1
+
     def scroll_to_top(self):
-        self.messages.see("1.0")  # scroll to top when entering a message
+        """scroll to top when entering a message
+        """
+        # self.messages.see("1.0")
+        current_line = self.get_messages_line(CURRENT)
+        lf = GUI._log_factor()
+        while current_line != 1:
+            time.sleep(0.01)
+            self.update()  # http://bit.ly/2g48IKs
+            subtract = lf.next()
+            if current_line - subtract > 1:
+                current_line -= subtract
+            else:
+                current_line = 1
+            self.messages.see("%s.0" % current_line)
 
     def scroll_to_bottom(self):
-        self.messages.see(END)  # scroll to bottom when entering a message
+        """scroll to bottom when entering a message
+        """
+        # self.messages.see(END)
+        current_line = self.get_messages_line(CURRENT)
+        last_line = self.get_messages_line(END)
+        lf = GUI._log_factor()
+        while current_line != last_line:
+            time.sleep(0.01)
+            self.update()  # http://bit.ly/2g48IKs
+            add = lf.next()
+            if current_line + add < last_line:
+                current_line += add
+            else:
+                current_line = last_line
+            self.messages.see("%s.0" % current_line)
 
     def init_menu(self):
         menu_bar = Menu(self.parent)
@@ -448,7 +486,6 @@ class GUI(Frame):
         if new:
             self.send_message(self.un, new)
             self.message_entry.delete(0, END)
-            self.scroll_to_top()  # scroll to top when entering a message
 
     def send_message(self, name, message):
         send = (name, message)
