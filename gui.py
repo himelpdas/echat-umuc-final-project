@@ -374,7 +374,7 @@ class GUI(Frame):
         file_menu.add_command(label="Exit", command=lambda: self.on_close())
         help_menu = Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="Help", menu=help_menu)
-        help_menu.add_command(label="Guide", command=lambda: self.up_queue.put((None, "/help")))  # TODO
+        help_menu.add_command(label="Guide", command=lambda: self.show_help_messages())  # TODO
         help_menu.add_separator()
         help_menu.add_command(
             label="About",
