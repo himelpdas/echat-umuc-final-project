@@ -9,7 +9,7 @@ from client import main as client
 
 from Tkinter import *
 import tkMessageBox, tkSimpleDialog
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, freeze_support
 from Queue import Empty
 import random
 import datetime
@@ -553,4 +553,6 @@ def main():
 
 
 if __name__ == '__main__':
+    # Pyinstaller fix
+    freeze_support()  # http://bit.ly/2g4t1aL
     main()
