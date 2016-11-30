@@ -181,7 +181,10 @@ def inputOutputThread(lSocket):
         if(readable):
             for clientSock in readable:
                 print "[Debug] inputOutputThread: clientSock is readable"
-                cmd, cmdId, buf = myRecv(clientSock, key)
+                try:
+                    cmd, cmdId, buf = myRecv(clientSock, key)
+                except (socket.error):  # fixed - this causes inputOutputThread to crash after a while
+                    socketList.remove(clientSock)
                 if(cmd == CHAT):
                     for s in socketList:
                         header = "%4s%4s%16s%16s" % (CHAT, 0,  binascii.crc32(buf),  len(buf))
