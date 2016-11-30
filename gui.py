@@ -1,6 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+# monkey patch for Windows pyinstaller multiprocessing support
+from pyinstaller_multiprocessing_patch import *
+
 # for testing before client gui integration and other experimental features
 # from dummy import *
 
@@ -526,14 +529,25 @@ class GUI(Frame):
         img = PhotoImage(data=icon)
         self.parent.tk.call('wm', 'iconphoto', self.parent._w, img)
 
+    @staticmethod
+    def resource_path(relative_path):  # http://bit.ly/2g4tcmo
+        """ Get absolute path to resource, works for dev and for PyInstaller """
+        try:
+            # PyInstaller creates a temp folder and stores path in _MEIPASS
+            base_path = sys._MEIPASS
+        except AttributeError:
+            base_path = os.path.abspath(".")
+
+        return os.path.join(base_path, relative_path)
+
     def set_bitmap_icon(self):
         """Under Windows, the DEFAULT parameter can be used to set the icon for the widget and any descendants that
         don't have an icon set explicitly. DEFAULT can be the relative path to a .ico file
         (example: root.iconbitmap(default='myicon.ico') ). See Tk documentation for more information."""
         if os.name == "nt":
-            self.parent.wm_iconbitmap(default="icon.ico")  # only works on windows :(  # fixed for all platforms
+            self.parent.wm_iconbitmap(default=GUI.resource_path("icon.ico"))  # only works on windows :(  # fixed for all platforms
         else:
-            self.parent.wm_iconbitmap("icon.ico")
+            self.parent.wm_iconbitmap(GUI.resource_path("icon.ico"))
 
 
 def main():
