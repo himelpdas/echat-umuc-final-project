@@ -2,7 +2,7 @@
 import socket
 import sys
 import os
-import socket, select, sys, traceback, binascii, re, commands, time, os, threading
+import socket, select, sys, traceback, binascii, re, commands, time, os, threading, ssl
 from Crypto.Cipher import ARC4
 from Crypto.Hash import SHA256
 
@@ -206,6 +206,7 @@ def main():
     print("Running Server")
     
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
+    s = ssl.wrap_socket(s, server_side=True, certfile="echatr.crt", keyfile="echatr.key")    
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind(('127.0.0.1', port))
     s.listen(100)

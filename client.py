@@ -1,4 +1,4 @@
-import socket, select, sys, commands, binascii, os, getpass, Queue, threading, time
+import socket, select, sys, commands, binascii, os, getpass, Queue, threading, time, ssl
 from Crypto.Cipher import ARC4
 #from curses import wrapper
 #from ui import ChatUI
@@ -235,6 +235,11 @@ def main(up_queue, down_queue):
 
 
     clientSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    
+    
+    clientSock = ssl.wrap_socket(clientSock,
+                              ca_certs="echatr.crt",
+                              cert_reqs=ssl.CERT_REQUIRED)    
     try:
         # clear screen and set ui
         # stdscr.clear()
