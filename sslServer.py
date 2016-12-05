@@ -18,14 +18,9 @@ from Crypto.Hash import SHA256
 # checksum  = crc32 value (16 char)
 # msg = data 
 
-# secrets database
+# secrets dictionary that holds database after reading
 
-secrets = {'user': '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
-           'jamie': '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
-           'jon': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
-           'himel': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
-           'dachelle': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
-           'david': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824'}
+secrets = {}
 """
 >>> p = SHA256.new()
 >>> p.update("hello")
@@ -36,7 +31,7 @@ secrets = {'user': '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d15
 
 key = '82aaee3b0f5c1e12' 
 
-#Constants
+# Protocol Constants
 
 HEADER_SIZE = 40 
 NET_BUF_SIZE = 1024
@@ -48,12 +43,35 @@ EXIT = 4
 USERLIST = 5
 NOT_IMPLEMENTED = -1 
 SELECT_TIMEOUT = 2
-DEBUG = 0
+DEBUG = 1
 
 socketList = []
+ 
 
+
+def readSecretsDb():
+    """ 
+       Opens up secrets.db in local directory that holds username and password hashes in comma separated values
+       and reads them into the global secrets dictionary used to authenticate users 
+    """
+    try:
+        f = open("secrets.db", "r")
+        for line in f:
+            ar = line.split(",", 1)
+            secrets[ar[0]] = ar[1].rstrip()    
+        f.close()
+        if DEBUG:
+            for k, v in secrets.iteritems():
+                print "[Debug] readSecretsDb: user: " + k  + ", value: " + v 
+            return len(secrets)
+        return len(secrets)
+        
+    except(IOError):
+        print "[Error] problem opening secrets.db"
+        return(0)
+    
 def processHeader(msg):
-
+    
     pCmd = msg[0:4]
     pCmdId = msg[4:8]
     pCrc = msg[8:24]
@@ -203,7 +221,12 @@ def main():
     
     port = 8080
     
-    print("Running Server")
+    print("[------ Starting Server ------]")
+    print("- Loading secrets database")
+    numUsers = readSecretsDb()
+    if(not numUsers):
+        print("[Error] No users in secrets.db, have you added any users?")
+        sys.exit(-1)
     
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
     s = ssl.wrap_socket(s, server_side=True, certfile="echatr.crt", keyfile="echatr.key")    
@@ -242,9 +265,9 @@ def main():
 
                 if DEBUG:
                     print "\n---\n"
-                    print username
-                    print p.hexdigest()
-                    print secrets[username]
+                    print "Username is " + username
+                    print "Hash of sent password is " + p.hexdigest()
+                    print "Hash of saved secret is " + secrets[username]
                     print "\n---\n"
                                    
                 if(p.hexdigest() == secrets[username]):
