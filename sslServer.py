@@ -2,7 +2,7 @@
 import socket
 import sys
 import os
-import socket, select, sys, traceback, binascii, re, commands, time, os, threading, ssl
+import socket, select, sys, traceback, binascii, re, commands, time, os, threading, ssl, getopt
 from Crypto.Cipher import ARC4
 from Crypto.Hash import SHA256
 
@@ -43,12 +43,22 @@ EXIT = 4
 USERLIST = 5
 NOT_IMPLEMENTED = -1 
 SELECT_TIMEOUT = 2
-DEBUG = 1
+DEBUG = 0
+VERBOSE = 0 
 
 socketList = []
  
 
-
+def usage():
+    """
+       Prints usage of the server if the appropriate number of arguments isn't passed from the command
+       line. 
+    """
+    
+    print("Usage: python sslServer.py -p <port> \n"
+          "                           -d  Toggles Debug   \n"
+          "                           -v  Toggles Verbosity   ")
+    sys.exit(0)
 def readSecretsDb():
     """ 
        Opens up secrets.db in local directory that holds username and password hashes in comma separated values
@@ -60,7 +70,7 @@ def readSecretsDb():
             ar = line.split(",", 1)
             secrets[ar[0]] = ar[1].rstrip()    
         f.close()
-        if DEBUG:
+        if(DEBUG):
             for k, v in secrets.iteritems():
                 print "[Debug] readSecretsDb: user: " + k  + ", value: " + v 
             return len(secrets)
@@ -188,7 +198,8 @@ def myRecv(recvSock, key):
     
 #...
 def inputOutputThread(lSocket):
-    print "[Debug] inputOutputThread: Start"
+    if(DEBUG or VERBOSE):
+        print "[Debug] inputOutputThread: Start"
 
     while True:
         if not socketList:
@@ -219,7 +230,36 @@ def inputOutputThread(lSocket):
     
 def main():
     
-    port = 8080
+    port = ''  
+    
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "p:hvd", ["help"])
+    except getopt.GetoptError as err:
+        # print help information and exit:
+        print str(err)  
+        usage()
+    for o, a in opts:
+        if o == "-v":
+            VERBOSE = 1
+            print "- Verbose mode inititated"
+        elif o == "-d":
+            DEBUG = 1
+            print "- Debug mode inititated"
+            
+        elif o in ("-h", "--help"):
+            usage()
+        elif o in ("-p", "--port"):
+            port = int(a)
+            if(port > 65535 or port < 1):
+                usage()
+        else:
+            usage()
+            
+    # ...    
+    if(port == ''):
+        print("[Error] Please set port!")
+        usage()
+    
     
     print("[------ Starting Server ------]")
     print("- Loading secrets database")
@@ -227,7 +267,7 @@ def main():
     if(not numUsers):
         print("[Error] No users in secrets.db, have you added any users?")
         sys.exit(-1)
-    
+    print("- Loaded " + str(numUsers) + " Users")
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
     s = ssl.wrap_socket(s, server_side=True, certfile="echatr.crt", keyfile="echatr.key")    
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
